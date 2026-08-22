@@ -7,6 +7,8 @@ import { ativarConta, criarAparelho, criarChip } from "@/lib/actions"
 import { db } from "@/lib/db"
 import { chip, device } from "@/lib/schema"
 
+export const dynamic = "force-dynamic"
+
 export default async function Page() {
   const aparelhos = await db
     .select()
