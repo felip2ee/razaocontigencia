@@ -1,8 +1,9 @@
-import { and, asc, count, desc, eq, isNull, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, gte, isNotNull, isNull, max, sql } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 
 import { db } from "./db.ts"
-import { account, chip, device, incident, warmupAction } from "./schema.ts"
-import type { AcaoCatalogo } from "./warmup.ts"
+import { account, chip, device, incident, warmupAction, warmupTask } from "./schema.ts"
+import type { AcaoCatalogo, ContaParaSorteio, Par } from "./warmup.ts"
 
 export type ContaNaLista = {
   id: number
@@ -159,4 +160,91 @@ export async function fichaDoChip(id: string): Promise<FichaChip | null> {
   const [aConta] = await db.select().from(account).where(eq(account.chipId, id))
 
   return { chip: oChip, aparelhoDaBandeja: aparelho ?? null, conta: aConta ?? null }
+}
+
+export type TarefaDoDia = {
+  id: number
+  accountId: number
+  deviceId: string
+  slot: string
+  numero: string
+  acao: string
+  categoria: string
+  status: "pendente" | "feito" | "pulado"
+  parNumero: string | null
+  parDeviceId: string | null
+}
+
+/**
+ * Contas elegíveis ao sorteio: ativas e sem incidente aberto. Carrega junto
+ * há quantos dias terminou a última restrição, que é o que faz a conta recuar
+ * uma faixa no plano de aquecimento.
+ */
+export async function contasParaSorteio(): Promise<ContaParaSorteio[]> {
+  const saudaveis = await contasSaudaveis()
+  if (saudaveis.length === 0) return []
+
+  const ultimasVoltas = await db
+    .select({
+      accountId: incident.accountId,
+      ultimoFim: max(incident.fim).as("ultimo_fim"),
+    })
+    .from(incident)
+    .where(and(eq(incident.tipo, "restricao"), isNotNull(incident.fim)))
+    .groupBy(incident.accountId)
+
+  const MS_POR_DIA = 86_400_000
+
+  return saudaveis.map((c) => {
+    const volta = ultimasVoltas.find((v) => v.accountId === c.id)
+    return {
+      id: c.id,
+      deviceId: c.deviceId,
+      ativadaEm: c.ativadaEm,
+      diasDesdeFimDeRestricao: volta?.ultimoFim
+        ? Math.floor((Date.now() - new Date(volta.ultimoFim).getTime()) / MS_POR_DIA)
+        : null,
+    }
+  })
+}
+
+/** Pares que já conversaram nos últimos 7 dias, para não repetir. */
+export async function paresRecentes(dia: string): Promise<Par[]> {
+  const desde = new Date(Date.parse(`${dia}T00:00:00Z`) - 7 * 86_400_000)
+    .toISOString()
+    .slice(0, 10)
+
+  const linhas = await db
+    .select({ a: warmupTask.accountId, b: warmupTask.parAccountId })
+    .from(warmupTask)
+    .where(and(isNotNull(warmupTask.parAccountId), gte(warmupTask.data, desde)))
+
+  return linhas.map((l) => ({ a: l.a, b: l.b! }))
+}
+
+export async function tarefasDoDia(dia: string): Promise<TarefaDoDia[]> {
+  const par = alias(account, "par")
+  const chipDoPar = alias(chip, "chip_do_par")
+
+  return db
+    .select({
+      id: warmupTask.id,
+      accountId: warmupTask.accountId,
+      deviceId: account.deviceId,
+      slot: account.slot,
+      numero: chip.numero,
+      acao: warmupAction.nome,
+      categoria: warmupAction.categoria,
+      status: warmupTask.status,
+      parNumero: chipDoPar.numero,
+      parDeviceId: par.deviceId,
+    })
+    .from(warmupTask)
+    .innerJoin(account, eq(account.id, warmupTask.accountId))
+    .innerJoin(chip, eq(chip.id, account.chipId))
+    .innerJoin(warmupAction, eq(warmupAction.id, warmupTask.actionId))
+    .leftJoin(par, eq(par.id, warmupTask.parAccountId))
+    .leftJoin(chipDoPar, eq(chipDoPar.id, par.chipId))
+    .where(eq(warmupTask.data, dia))
+    .orderBy(asc(account.deviceId), asc(account.slot), asc(warmupTask.id))
 }

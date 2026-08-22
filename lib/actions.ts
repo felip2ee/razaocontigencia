@@ -4,7 +4,9 @@ import { and, eq, isNull } from "drizzle-orm"
 import { refresh } from "next/cache"
 
 import { db } from "./db.ts"
-import { account, chip, device, incident } from "./schema.ts"
+import { account, chip, device, incident, warmupTask } from "./schema.ts"
+import { contasParaSorteio, listarCatalogo, paresRecentes } from "./queries.ts"
+import { gerarTarefasDoDia } from "./warmup.ts"
 
 function texto(formData: FormData, campo: string): string {
   const valor = formData.get(campo)
@@ -129,5 +131,40 @@ export async function moverChip(formData: FormData) {
       posicao: local === "pasta" ? textoOpcional(formData, "posicao") : null,
     })
     .where(eq(chip.id, texto(formData, "chipId")))
+  refresh()
+}
+
+function hojeISO(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+/**
+ * Sorteia as tarefas de hoje. É seguro chamar duas vezes: a constraint
+ * warmup_task_unica descarta o que já existe para a mesma conta, ação e dia.
+ */
+export async function gerarAquecimentoDeHoje() {
+  const dia = hojeISO()
+  const [contas, catalogo, pares] = await Promise.all([
+    contasParaSorteio(),
+    listarCatalogo(),
+    paresRecentes(dia),
+  ])
+
+  const tarefas = gerarTarefasDoDia(contas, catalogo, pares, new Date(), Math.random)
+  if (tarefas.length > 0) {
+    await db
+      .insert(warmupTask)
+      .values(tarefas.map((t) => ({ ...t, data: dia })))
+      .onConflictDoNothing()
+  }
+  refresh()
+}
+
+export async function marcarTarefa(formData: FormData) {
+  const status = texto(formData, "status") as "feito" | "pulado"
+  await db
+    .update(warmupTask)
+    .set({ status, feitoEm: new Date() })
+    .where(eq(warmupTask.id, Number(texto(formData, "tarefaId"))))
   refresh()
 }
