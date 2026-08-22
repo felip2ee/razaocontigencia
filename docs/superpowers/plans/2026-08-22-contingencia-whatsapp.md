@@ -1945,7 +1945,7 @@ git commit -m "feat: ficha do chip e movimentacao entre pasta, gaveta e bandeja"
 
 ---
 
-## Task 8: Tarefas de aquecimento do dia
+## Task 8: Tarefas de aquecimento do dia — CONCLUÍDA (commits 3fdaa1f + fix ff349a4, 1 achado estacionado)
 
 **Files:**
 - Create: `app/aquecimento/page.tsx`
@@ -1956,7 +1956,7 @@ git commit -m "feat: ficha do chip e movimentacao entre pasta, gaveta e bandeja"
 - Consumes: `gerarTarefasDoDia`, `listarCatalogo`, `contasSaudaveis`.
 - Produces em `lib/queries.ts`: `tarefasDoDia(dia: string): Promise<TarefaDoDia[]>`, `contasParaSorteio(): Promise<ContaParaSorteio[]>`, `paresRecentes(dia: string): Promise<Par[]>`, tipo `TarefaDoDia`. Em `lib/actions.ts`: `gerarAquecimentoDeHoje()`, `marcarTarefa(formData: FormData)`.
 
-- [ ] **Step 1: Acrescentar as leituras de aquecimento**
+- [x] **Step 1: Acrescentar as leituras de aquecimento**
 
 No fim de `lib/queries.ts`, ajustando antes os imports do topo: acrescentar `gte`, `isNotNull` e `max` ao import de `drizzle-orm`; acrescentar `warmupTask` ao import de `./schema.ts`; acrescentar `ContaParaSorteio` e `Par` ao import de tipos de `./warmup.ts`; e acrescentar a linha `import { alias } from "drizzle-orm/pg-core"`.
 
@@ -2049,7 +2049,7 @@ export async function tarefasDoDia(dia: string): Promise<TarefaDoDia[]> {
 }
 ```
 
-- [ ] **Step 2: Acrescentar as ações de aquecimento**
+- [x] **Step 2: Acrescentar as ações de aquecimento**
 
 No fim de `lib/actions.ts` (acrescentando `warmupTask` ao import do schema):
 
@@ -2093,7 +2093,7 @@ export async function marcarTarefa(formData: FormData) {
 }
 ```
 
-- [ ] **Step 3: Escrever a página de aquecimento**
+- [x] **Step 3: Escrever a página de aquecimento**
 
 Criar `app/aquecimento/page.tsx`:
 
@@ -2192,7 +2192,7 @@ export default async function Page() {
 }
 ```
 
-- [ ] **Step 4: Testar na mão**
+- [x] **Step 4: Testar na mão**
 
 Run: `npm run dev`
 
@@ -2215,7 +2215,7 @@ docker compose exec -T db psql -U postgres -d contingencia -c "delete from warmu
 
 Expected: ao gerar de novo, a conta restrita não aparece na lista.
 
-- [ ] **Step 5: Rodar a verificação final**
+- [x] **Step 5: Rodar a verificação final**
 
 Run: `npm test`
 Expected: todos os testes do motor passam.
@@ -2226,7 +2226,7 @@ Expected: sem erro.
 Run: `npm run build`
 Expected: build conclui sem erro.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/aquecimento lib/queries.ts lib/actions.ts
