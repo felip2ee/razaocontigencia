@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: contingencia-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: contingencia
+    ports:
+      - "5432:5432"
+    volumes:
+      - contingencia-data:/var/lib/postgresql/data
+
+volumes:
+  contingencia-data:
