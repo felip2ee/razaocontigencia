@@ -1391,7 +1391,7 @@ git commit -m "feat: painel de disponibilidade e busca por ID"
 
 ---
 
-## Task 6: Ficha do aparelho e incidentes
+## Task 6: Ficha do aparelho e incidentes — CONCLUÍDA (commit 54298ae, 1 achado estacionado)
 
 **Files:**
 - Create: `app/aparelho/[id]/page.tsx`
@@ -1402,7 +1402,7 @@ git commit -m "feat: painel de disponibilidade e busca por ID"
 - Consumes: `fichaDoAparelho` de `lib/queries.ts`.
 - Produces em `lib/actions.ts`: `registrarIncidente(formData: FormData)`, `encerrarIncidente(formData: FormData)`, `resolverBan(formData: FormData)`, `mudarStatusDoAparelho(formData: FormData)`. `components/incident-form.tsx` exporta `RegistrarIncidente({ accountId }: { accountId: number })` e `EncerrarIncidente({ incidentId, tipo }: { incidentId: number; tipo: "restricao" | "ban" })`.
 
-- [ ] **Step 1: Acrescentar as ações de incidente**
+- [x] **Step 1: Acrescentar as ações de incidente**
 
 No fim de `lib/actions.ts`, acrescentar (mantendo os imports existentes e trocando a linha de import do drizzle por `import { and, eq, isNull } from "drizzle-orm"`, e a do schema por `import { account, chip, device, incident } from "./schema.ts"`):
 
@@ -1464,7 +1464,7 @@ export async function mudarStatusDoAparelho(formData: FormData) {
 }
 ```
 
-- [ ] **Step 2: Escrever os formulários de incidente**
+- [x] **Step 2: Escrever os formulários de incidente**
 
 Criar `components/incident-form.tsx`:
 
@@ -1538,7 +1538,7 @@ export function EncerrarIncidente({
 }
 ```
 
-- [ ] **Step 3: Escrever a ficha do aparelho**
+- [x] **Step 3: Escrever a ficha do aparelho**
 
 Criar `app/aparelho/[id]/page.tsx`:
 
@@ -1716,7 +1716,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 }
 ```
 
-- [ ] **Step 4: Testar o ciclo de restrição na mão**
+- [x] **Step 4: Testar o ciclo de restrição na mão**
 
 Run: `npm run dev`
 
@@ -1726,7 +1726,7 @@ Expected: a linha passa a mostrar `Restrição há 24h` e o botão vira "Voltou"
 Clicar em "Voltou".
 Expected: a conta volta a "Saudável" e o histórico ganha uma linha com duração preenchida.
 
-- [ ] **Step 5: Testar o ciclo de ban na mão**
+- [x] **Step 5: Testar o ciclo de ban na mão**
 
 Na conta do slot WhatsApp 2, registrar um ban com início de hoje.
 Expected: aparecem dois botões, "Análise devolveu" e "Perdido".
@@ -1743,7 +1743,7 @@ Expected: o chip da conta banida com status `aposentado` e a conta com status `a
 Provar que o slot foi liberado: em `/cadastro`, ativar uma conta nova em `AP001` no slot `wa2` com o chip `C003`.
 Expected: salva sem erro de constraint.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/aparelho components/incident-form.tsx lib/actions.ts
