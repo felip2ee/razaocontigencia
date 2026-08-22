@@ -144,13 +144,22 @@ function hojeISO(): string {
  */
 export async function gerarAquecimentoDeHoje() {
   const dia = hojeISO()
-  const [contas, catalogo, pares] = await Promise.all([
+  const [contas, catalogo, pares, jaTemTarefa] = await Promise.all([
     contasParaSorteio(),
     listarCatalogo(),
     paresRecentes(dia),
+    db
+      .selectDistinct({ accountId: warmupTask.accountId })
+      .from(warmupTask)
+      .where(eq(warmupTask.data, dia)),
   ])
 
-  const tarefas = gerarTarefasDoDia(contas, catalogo, pares, new Date(), Math.random)
+  // Idempotência por conta: quem já tem tarefa hoje não sorteia de novo, senão
+  // um segundo clique poderia somar tarefas além da cota da faixa.
+  const jaSorteadas = new Set(jaTemTarefa.map((c) => c.accountId))
+  const contasSemTarefa = contas.filter((c) => !jaSorteadas.has(c.id))
+
+  const tarefas = gerarTarefasDoDia(contasSemTarefa, catalogo, pares, new Date(), Math.random)
   if (tarefas.length > 0) {
     await db
       .insert(warmupTask)
