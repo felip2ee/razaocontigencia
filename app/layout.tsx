@@ -18,12 +18,23 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="pt-BR"
       suppressHydrationWarning
       className={cn("antialiased", fontMono.variable, "font-sans", inter.variable)}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <header className="flex items-center gap-6 border-b px-6 py-3 text-sm">
+            <a href="/" className="font-medium">
+              Contingência
+            </a>
+            <nav className="flex gap-4">
+              <a href="/aquecimento">Aquecimento</a>
+              <a href="/cadastro">Cadastro</a>
+            </nav>
+          </header>
+          <main>{children}</main>
+        </ThemeProvider>
       </body>
     </html>
   )
