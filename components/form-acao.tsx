@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useEffect, useRef } from "react"
 
 import type { EstadoDoForm } from "@/lib/actions"
 
@@ -20,10 +20,32 @@ export function FormAcao({
   className?: string
   children: React.ReactNode
 }) {
-  const [estado, enviar] = useActionState(acao, null)
+  const formulario = useRef<HTMLFormElement>(null)
+  const ultimoEnvio = useRef<FormData | null>(null)
+
+  const [estado, enviar] = useActionState(
+    async (anterior: EstadoDoForm, formData: FormData) => {
+      ultimoEnvio.current = formData
+      return acao(anterior, formData)
+    },
+    null,
+  )
+
+  // O React limpa o formulário depois da action. Quando deu erro isso obriga a
+  // redigitar tudo, e aqui se digita código de fita à mão: devolvemos os
+  // valores para o operador só corrigir o que estava errado.
+  useEffect(() => {
+    if (!estado?.erro || !formulario.current || !ultimoEnvio.current) return
+    for (const [nome, valor] of ultimoEnvio.current.entries()) {
+      const campo = formulario.current.elements.namedItem(nome)
+      if (typeof valor === "string" && campo && "value" in campo) {
+        campo.value = valor
+      }
+    }
+  }, [estado])
 
   return (
-    <form action={enviar} className={className}>
+    <form ref={formulario} action={enviar} className={className}>
       {children}
       {estado?.erro && (
         <p role="alert" className="text-destructive text-sm">
