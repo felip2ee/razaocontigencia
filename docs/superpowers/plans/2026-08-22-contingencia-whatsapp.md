@@ -327,7 +327,7 @@ git commit -m "feat: schema do banco e infraestrutura postgres"
 
 ---
 
-## Task 2: Motor de aquecimento
+## Task 2: Motor de aquecimento — CONCLUÍDA (commit 5b3d8cd, review limpa)
 
 Lógica pura, sem banco. É o único código do projeto que pode quebrar em silêncio, então é o único com testes.
 
@@ -349,7 +349,7 @@ Lógica pura, sem banco. É o único código do projeto que pode quebrar em sil�
   - `gerarTarefasDoDia(contas: ContaParaSorteio[], catalogo: AcaoCatalogo[], paresRecentes: Par[], hoje: Date, rng: () => number): TarefaSorteada[]`
   - Tipos `Faixa`, `AcaoCatalogo`, `ContaParaSorteio`, `Par`, `TarefaSorteada`
 
-- [ ] **Step 1: Permitir importar com extensão .ts**
+- [x] **Step 1: Permitir importar com extensão .ts**
 
 Em `tsconfig.json`, dentro de `compilerOptions`, acrescentar:
 
@@ -359,7 +359,7 @@ Em `tsconfig.json`, dentro de `compilerOptions`, acrescentar:
 
 Isso é obrigatório porque o Node exige a extensão explícita em imports ESM relativos, e sem essa flag o TypeScript reclama. É permitido porque `noEmit` já é `true`.
 
-- [ ] **Step 2: Escrever os testes que falham**
+- [x] **Step 2: Escrever os testes que falham**
 
 Criar `lib/warmup.test.ts`:
 
@@ -485,12 +485,12 @@ test("gerarTarefasDoDia respeita a quantidade da faixa de cada conta", () => {
 })
 ```
 
-- [ ] **Step 3: Rodar os testes e ver falhar**
+- [x] **Step 3: Rodar os testes e ver falhar**
 
 Run: `npm test`
 Expected: FALHA — `Cannot find module './warmup.ts'`.
 
-- [ ] **Step 4: Implementar o motor**
+- [x] **Step 4: Implementar o motor**
 
 Criar `lib/warmup.ts`:
 
@@ -652,12 +652,12 @@ export function gerarTarefasDoDia(
 }
 ```
 
-- [ ] **Step 5: Rodar os testes e ver passar**
+- [x] **Step 5: Rodar os testes e ver passar**
 
 Run: `npm test`
 Expected: todos os testes passam, sem falha nem erro.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/warmup.ts lib/warmup.test.ts tsconfig.json package.json
