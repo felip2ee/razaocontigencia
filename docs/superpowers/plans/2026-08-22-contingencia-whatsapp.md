@@ -1170,7 +1170,7 @@ git commit -m "feat: cadastro de aparelho, chip e conta"
 
 ---
 
-## Task 5: Painel e busca
+## Task 5: Painel e busca — CONCLUÍDA (commits 69ff49d + fix 3061998, review limpa)
 
 **Files:**
 - Modify: `app/page.tsx`
@@ -1182,7 +1182,7 @@ git commit -m "feat: cadastro de aparelho, chip e conta"
 - Consumes: `contadores`, `contasSaudaveis`, `contasComIncidenteAberto` de `lib/queries.ts`.
 - Produces: `components/busca.tsx` exporta `Busca` (componente sem props). `app/busca/route.ts` exporta `GET`.
 
-- [ ] **Step 1: Escrever o painel**
+- [x] **Step 1: Escrever o painel**
 
 Substituir `app/page.tsx` por:
 
@@ -1317,7 +1317,7 @@ export default async function Page() {
 }
 ```
 
-- [ ] **Step 2: Escrever a rota de busca**
+- [x] **Step 2: Escrever a rota de busca**
 
 Criar `app/busca/route.ts`:
 
@@ -1342,7 +1342,7 @@ export async function GET(request: NextRequest) {
 }
 ```
 
-- [ ] **Step 3: Escrever o campo de busca**
+- [x] **Step 3: Escrever o campo de busca**
 
 Criar `components/busca.tsx`:
 
@@ -1365,11 +1365,11 @@ export function Busca() {
 
 Formulário com `method` GET padrão apontando para a rota — sem estado de cliente, sem `use client`.
 
-- [ ] **Step 4: Colocar a busca no cabeçalho**
+- [x] **Step 4: Colocar a busca no cabeçalho**
 
 Em `app/layout.tsx`, importar `import { Busca } from "@/components/busca"` e acrescentar `<Busca />` como último filho do `<header>`.
 
-- [ ] **Step 5: Testar na mão**
+- [x] **Step 5: Testar na mão**
 
 Run: `npm run dev`
 
@@ -1382,7 +1382,7 @@ Expected: redireciona para `/aparelho/AP001` (a página ainda não existe — 40
 Digitar `C001`.
 Expected: redireciona para `/chip/C001`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/page.tsx app/busca/route.ts components/busca.tsx app/layout.tsx
