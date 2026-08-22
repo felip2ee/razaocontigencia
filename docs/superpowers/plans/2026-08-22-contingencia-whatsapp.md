@@ -12,6 +12,7 @@
 
 ## Global Constraints
 
+- **Toda `page.tsx` que lê o banco leva `export const dynamic = "force-dynamic"`.** Sem isso o Next 16 prerenderiza a rota como estática e serve dados congelados do momento do build para qualquer sessão nova — `refresh()` refresca o client router mas não invalida prerender. Verificado empiricamente na Task 4. Confirme no `npm run build` que a rota aparece como `ƒ`, não `○`.
 - Diretório de trabalho: `razao-contigencia/`. Todos os caminhos deste plano são relativos a ele.
 - Next.js 16: `params` em rota dinâmica é `Promise` e precisa de `await`. Server Actions usam `refresh()` de `next/cache`, não `revalidatePath` — as páginas leem o banco sem cache, então basta re-renderizar a rota.
 - Node.js 24: executa TypeScript nativamente (type stripping). Não instalar transpilador para testes nem para scripts.
@@ -921,7 +922,7 @@ git commit -m "feat: seed do catalogo de aquecimento e leituras do banco"
 
 ---
 
-## Task 4: Cadastro
+## Task 4: Cadastro — CONCLUÍDA (commits 1586672 + fix cdeb097, review limpa)
 
 Primeira tela. Vem antes do painel porque sem ela não há dado para o painel mostrar.
 
@@ -934,13 +935,13 @@ Primeira tela. Vem antes do painel porque sem ela não há dado para o painel mo
 - Consumes: `db`, `schema` de `lib/db.ts`.
 - Produces em `lib/actions.ts`: `criarAparelho(formData: FormData)`, `criarChip(formData: FormData)`, `ativarConta(formData: FormData)`. Todas são Server Actions que recebem `FormData` e não retornam valor.
 
-- [ ] **Step 1: Instalar os componentes shadcn**
+- [x] **Step 1: Instalar os componentes shadcn**
 
 ```bash
 npx shadcn@latest add table dialog input select badge tabs label
 ```
 
-- [ ] **Step 2: Escrever as ações de escrita**
+- [x] **Step 2: Escrever as ações de escrita**
 
 Criar `lib/actions.ts`:
 
@@ -1002,7 +1003,7 @@ export async function ativarConta(formData: FormData) {
 
 Não há validação além de campo vazio: slot duplicado, chip já em uso e aparelho inexistente são recusados pelas constraints da Task 1, e o erro sobe como mensagem.
 
-- [ ] **Step 3: Escrever a página de cadastro**
+- [x] **Step 3: Escrever a página de cadastro**
 
 Criar `app/cadastro/page.tsx`:
 
@@ -1126,7 +1127,7 @@ export default async function Page() {
 
 O `<select>` é nativo de propósito: é o controle certo para o caso e não precisa de componente de cliente.
 
-- [ ] **Step 4: Acrescentar navegação ao layout**
+- [x] **Step 4: Acrescentar navegação ao layout**
 
 Em `app/layout.tsx`, substituir o conteúdo de `<body>` por:
 
@@ -1149,7 +1150,7 @@ Em `app/layout.tsx`, substituir o conteúdo de `<body>` por:
 
 Trocar também `lang="en"` por `lang="pt-BR"`.
 
-- [ ] **Step 5: Testar na mão**
+- [x] **Step 5: Testar na mão**
 
 Run: `npm run dev`
 
@@ -1160,7 +1161,7 @@ Expected: os três formulários salvam e a página recarrega com os selects atua
 Agora provar que a constraint aparece como erro na interface: tentar ativar uma quarta conta em `AP001` no slot `wa1`.
 Expected: erro de constraint, a conta não é criada.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lib/actions.ts app/cadastro/page.tsx app/layout.tsx components/ui
