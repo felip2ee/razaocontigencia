@@ -1752,7 +1752,7 @@ git commit -m "feat: ficha do aparelho e ciclo de restricao e ban"
 
 ---
 
-## Task 7: Ficha do chip
+## Task 7: Ficha do chip — CONCLUÍDA (commit ca0a39a, review limpa)
 
 **Files:**
 - Create: `app/chip/[id]/page.tsx`
@@ -1762,7 +1762,7 @@ git commit -m "feat: ficha do aparelho e ciclo de restricao e ban"
 - Consumes: `fichaDoChip` de `lib/queries.ts`.
 - Produces em `lib/actions.ts`: `moverChip(formData: FormData)`.
 
-- [ ] **Step 1: Acrescentar a ação de mover chip**
+- [x] **Step 1: Acrescentar a ação de mover chip**
 
 No fim de `lib/actions.ts`:
 
@@ -1792,7 +1792,7 @@ export async function moverChip(formData: FormData) {
 }
 ```
 
-- [ ] **Step 2: Escrever a ficha do chip**
+- [x] **Step 2: Escrever a ficha do chip**
 
 Criar `app/chip/[id]/page.tsx`:
 
@@ -1923,7 +1923,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 }
 ```
 
-- [ ] **Step 3: Testar na mão**
+- [x] **Step 3: Testar na mão**
 
 Run: `npm run dev`
 
@@ -1936,7 +1936,7 @@ Expected: a página passa a dizer "Na bandeja do aparelho AP001", e `/aparelho/A
 Mover de volta para a pasta com posição "pasta 1, folha 2".
 Expected: a página mostra a posição e `/aparelho/AP001` volta a dizer "Bandeja vazia".
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/chip lib/actions.ts
