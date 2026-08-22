@@ -666,7 +666,7 @@ git commit -m "feat: motor de sorteio de aquecimento por faixa de idade"
 
 ---
 
-## Task 3: Catálogo de ações e leituras
+## Task 3: Catálogo de ações e leituras — CONCLUÍDA (commit 684e29a, review limpa)
 
 **Files:**
 - Create: `lib/seed.ts`
@@ -683,7 +683,7 @@ git commit -m "feat: motor de sorteio de aquecimento por faixa de idade"
   - `fichaDoChip(id: string): Promise<FichaChip | null>`
   - Tipos `ContaNaLista`, `ContaComIncidente`, `FichaAparelho`, `FichaChip`
 
-- [ ] **Step 1: Escrever a seed do catálogo**
+- [x] **Step 1: Escrever a seed do catálogo**
 
 Criar `lib/seed.ts`:
 
@@ -725,7 +725,7 @@ process.exit(0)
 
 `onConflictDoNothing` no nome torna a seed idempotente — rodar duas vezes não duplica.
 
-- [ ] **Step 2: Rodar a seed**
+- [x] **Step 2: Rodar a seed**
 
 Run: `npm run db:seed`
 Expected: `catálogo: 16 ações garantidas`.
@@ -738,7 +738,7 @@ Rodar de novo para provar a idempotência:
 Run: `npm run db:seed && docker compose exec -T db psql -U postgres -d contingencia -c "select count(*) from warmup_action"`
 Expected: ainda `16`.
 
-- [ ] **Step 3: Escrever as leituras**
+- [x] **Step 3: Escrever as leituras**
 
 Criar `lib/queries.ts`:
 
@@ -907,12 +907,12 @@ export async function fichaDoChip(id: string): Promise<FichaChip | null> {
 }
 ```
 
-- [ ] **Step 4: Verificar que as leituras rodam**
+- [x] **Step 4: Verificar que as leituras rodam**
 
 Run: `npx tsc --noEmit`
 Expected: sem erro de tipo.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/seed.ts lib/queries.ts
