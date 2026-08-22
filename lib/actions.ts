@@ -1,12 +1,66 @@
 "use server"
 
-import { and, eq, isNull } from "drizzle-orm"
+import { and, eq, isNull, sql } from "drizzle-orm"
 import { refresh } from "next/cache"
 
 import { db } from "./db.ts"
 import { account, chip, device, incident, warmupTask } from "./schema.ts"
 import { contasParaSorteio, listarCatalogo, paresRecentes } from "./queries.ts"
-import { gerarTarefasDoDia } from "./warmup.ts"
+import { gerarTarefasDoDia, hojeISO } from "./warmup.ts"
+
+/** O que uma action devolve para o formulário, via `useActionState`. */
+export type EstadoDoForm = { erro?: string; aviso?: string } | null
+
+/**
+ * As regras que importam são constraints no banco. Aqui elas viram frase em
+ * português — o nome do índice é o único jeito de saber qual regra bateu.
+ */
+const MENSAGEM_DA_CONSTRAINT: Record<string, string> = {
+  device_pkey: "Já existe um aparelho com esse ID.",
+  chip_pkey: "Já existe um chip com esse ID.",
+  account_slot_ativo: "Esse slot já tem uma conta ativa neste aparelho.",
+  account_chip_ativo: "Esse chip já está em uso por outra conta ativa.",
+  incident_aberto_unico: "Essa conta já tem um incidente aberto. Encerre o atual antes.",
+  warmup_task_unica: "Essa tarefa já foi sorteada hoje para essa conta.",
+}
+
+/** O erro do pg pode vir embrulhado pelo drizzle; a constraint fica na cadeia de causas. */
+function constraintDoErro(erro: unknown): string | undefined {
+  let atual: unknown = erro
+  while (atual && typeof atual === "object") {
+    const nome = (atual as { constraint?: unknown }).constraint
+    if (typeof nome === "string") return nome
+    atual = (atual as { cause?: unknown }).cause
+  }
+  return undefined
+}
+
+function mensagemDoErro(erro: unknown): string {
+  const constraint = constraintDoErro(erro)
+  if (constraint && MENSAGEM_DA_CONSTRAINT[constraint]) {
+    return MENSAGEM_DA_CONSTRAINT[constraint]
+  }
+  if (erro instanceof Error && erro.message.startsWith("Campo obrigatório")) {
+    return erro.message
+  }
+  return "Não foi possível salvar. Confira os dados e tente de novo."
+}
+
+/**
+ * Roda a escrita e devolve estado em vez de estourar: o operador precisa ler o
+ * que houve, em português, sem perder a página nem o que já digitou.
+ */
+async function comMensagem(
+  trabalho: () => Promise<EstadoDoForm | void>,
+): Promise<EstadoDoForm> {
+  try {
+    const estado = await trabalho()
+    refresh()
+    return estado ?? null
+  } catch (erro) {
+    return { erro: mensagemDoErro(erro) }
+  }
+}
 
 function texto(formData: FormData, campo: string): string {
   const valor = formData.get(campo)
@@ -21,49 +75,68 @@ function textoOpcional(formData: FormData, campo: string): string | null {
   return typeof valor === "string" && valor.trim() !== "" ? valor.trim() : null
 }
 
-export async function criarAparelho(formData: FormData) {
-  await db.insert(device).values({
-    id: texto(formData, "id"),
-    apelido: textoOpcional(formData, "apelido"),
-    notas: textoOpcional(formData, "notas"),
-  })
-  refresh()
-}
-
-export async function criarChip(formData: FormData) {
-  await db.insert(chip).values({
-    id: texto(formData, "id"),
-    operadora: texto(formData, "operadora"),
-    numero: texto(formData, "numero"),
-    posicao: textoOpcional(formData, "posicao"),
-  })
-  refresh()
-}
-
-export async function ativarConta(formData: FormData) {
-  const chipId = texto(formData, "chipId")
-  await db.transaction(async (tx) => {
-    await tx.insert(account).values({
-      deviceId: texto(formData, "deviceId"),
-      slot: texto(formData, "slot") as "wa1" | "wa2" | "business",
-      chipId,
-      ativadaEm: texto(formData, "ativadaEm"),
+export async function criarAparelho(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    await db.insert(device).values({
+      id: texto(formData, "id"),
+      apelido: textoOpcional(formData, "apelido"),
+      notas: textoOpcional(formData, "notas"),
     })
-    await tx.update(chip).set({ status: "em_uso" }).where(eq(chip.id, chipId))
+    return { aviso: "Aparelho cadastrado." }
   })
-  refresh()
 }
 
-export async function registrarIncidente(formData: FormData) {
-  const tipo = texto(formData, "tipo") as "restricao" | "ban"
-  await db.insert(incident).values({
-    accountId: Number(texto(formData, "accountId")),
-    tipo,
-    inicio: new Date(texto(formData, "inicio")),
-    resultado: tipo === "ban" ? "pendente" : null,
-    notas: textoOpcional(formData, "notas"),
+export async function criarChip(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    await db.insert(chip).values({
+      id: texto(formData, "id"),
+      operadora: texto(formData, "operadora"),
+      numero: texto(formData, "numero"),
+      posicao: textoOpcional(formData, "posicao"),
+    })
+    return { aviso: "Chip cadastrado." }
   })
-  refresh()
+}
+
+export async function ativarConta(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    const chipId = texto(formData, "chipId")
+    await db.transaction(async (tx) => {
+      await tx.insert(account).values({
+        deviceId: texto(formData, "deviceId"),
+        slot: texto(formData, "slot") as "wa1" | "wa2" | "business",
+        chipId,
+        ativadaEm: texto(formData, "ativadaEm"),
+      })
+      await tx.update(chip).set({ status: "em_uso" }).where(eq(chip.id, chipId))
+    })
+    return { aviso: "Conta ativada." }
+  })
+}
+
+export async function registrarIncidente(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    const tipo = texto(formData, "tipo") as "restricao" | "ban"
+    await db.insert(incident).values({
+      accountId: Number(texto(formData, "accountId")),
+      tipo,
+      inicio: new Date(texto(formData, "inicio")),
+      resultado: tipo === "ban" ? "pendente" : null,
+      notas: textoOpcional(formData, "notas"),
+    })
+  })
 }
 
 /** Restrição acabou: carimba o fim. A duração é sempre calculada, nunca digitada. */
@@ -87,8 +160,12 @@ export async function resolverBan(formData: FormData) {
     const [oIncidente] = await tx
       .update(incident)
       .set({ resultado, fim: new Date() })
-      .where(eq(incident.id, incidentId))
+      .where(and(eq(incident.id, incidentId), isNull(incident.fim)))
       .returning({ accountId: incident.accountId })
+
+    // Já encerrado por outro clique: nada a fazer, e a tela recarregada mostra
+    // a situação real. Sem linha não há accountId, e seguir estouraria aqui.
+    if (!oIncidente) return
 
     if (resultado === "perdida") {
       const [aConta] = await tx
@@ -134,39 +211,69 @@ export async function moverChip(formData: FormData) {
   refresh()
 }
 
-function hojeISO(): string {
-  return new Date().toISOString().slice(0, 10)
-}
+/** Chave arbitrária do advisory lock que serializa a geração do aquecimento. */
+const LOCK_DO_AQUECIMENTO = 20260822
 
 /**
- * Sorteia as tarefas de hoje. É seguro chamar duas vezes: a constraint
- * warmup_task_unica descarta o que já existe para a mesma conta, ação e dia.
+ * Sorteia as tarefas de hoje. Quem garante a idempotência é o filtro
+ * `contasSemTarefa`: a conta que já tem qualquer tarefa hoje não sorteia de
+ * novo, senão um segundo clique somaria ações além da cota da faixa. A
+ * constraint `warmup_task_unica` só impede repetir a mesma ação — sozinha ela
+ * deixaria passar ações diferentes. Não remova o filtro confiando nela.
+ *
+ * O filtro e o insert correm na mesma transação, sob `pg_advisory_xact_lock`,
+ * porque dois cliques simultâneos passariam ambos pelo filtro.
  */
-export async function gerarAquecimentoDeHoje() {
-  const dia = hojeISO()
-  const [contas, catalogo, pares, jaTemTarefa] = await Promise.all([
-    contasParaSorteio(),
-    listarCatalogo(),
-    paresRecentes(dia),
-    db
-      .selectDistinct({ accountId: warmupTask.accountId })
-      .from(warmupTask)
-      .where(eq(warmupTask.data, dia)),
-  ])
+export async function gerarAquecimentoDeHoje(): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    const dia = hojeISO()
+    const [contas, catalogo, pares] = await Promise.all([
+      contasParaSorteio(),
+      listarCatalogo(),
+      paresRecentes(dia),
+    ])
 
-  // Idempotência por conta: quem já tem tarefa hoje não sorteia de novo, senão
-  // um segundo clique poderia somar tarefas além da cota da faixa.
-  const jaSorteadas = new Set(jaTemTarefa.map((c) => c.accountId))
-  const contasSemTarefa = contas.filter((c) => !jaSorteadas.has(c.id))
+    if (contas.length === 0) {
+      return { aviso: "Nenhuma conta saudável para aquecer hoje." }
+    }
 
-  const tarefas = gerarTarefasDoDia(contasSemTarefa, catalogo, pares, new Date(), Math.random)
-  if (tarefas.length > 0) {
-    await db
-      .insert(warmupTask)
-      .values(tarefas.map((t) => ({ ...t, data: dia })))
-      .onConflictDoNothing()
-  }
-  refresh()
+    return db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(${LOCK_DO_AQUECIMENTO})`)
+
+      const jaTemTarefa = await tx
+        .selectDistinct({ accountId: warmupTask.accountId })
+        .from(warmupTask)
+        .where(eq(warmupTask.data, dia))
+
+      const jaSorteadas = new Set(jaTemTarefa.map((c) => c.accountId))
+      const contasSemTarefa = contas.filter((c) => !jaSorteadas.has(c.id))
+      if (contasSemTarefa.length === 0) {
+        return { aviso: "Todas as contas saudáveis já têm as tarefas de hoje." }
+      }
+
+      // O pool de pares é a frota saudável inteira, não só quem falta sortear.
+      const tarefas = gerarTarefasDoDia(
+        contasSemTarefa,
+        catalogo,
+        pares,
+        new Date(),
+        Math.random,
+        contas,
+      )
+      if (tarefas.length === 0) {
+        return { aviso: "Nenhuma ação do catálogo é elegível para as contas de hoje." }
+      }
+
+      await tx
+        .insert(warmupTask)
+        .values(tarefas.map((t) => ({ ...t, data: dia })))
+        .onConflictDoNothing()
+
+      return {
+        aviso: `${tarefas.length} tarefa(s) sorteada(s) para ${contasSemTarefa.length} conta(s).`,
+      }
+    })
+  })
 }
 
 export async function marcarTarefa(formData: FormData) {

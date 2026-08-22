@@ -10,6 +10,9 @@ const CATALOGO = [
   { nome: "Postar um status", categoria: "perfil", idadeMinDias: 4, idadeMaxDias: null, peso: 1 },
   // conversa entre os próprios números — a partir do dia 4
   { nome: "Trocar 5 mensagens de texto com outro número", categoria: "conversa", idadeMinDias: 4, idadeMaxDias: null, peso: 3 },
+  // Sem esta a faixa 4-7 tem só 4 ações elegíveis para uma cota de 5, e toda
+  // conta na segunda semana fica abaixo da cota para sempre.
+  { nome: "Responder as mensagens recebidas do dia", categoria: "conversa", idadeMinDias: 4, idadeMaxDias: null, peso: 2 },
   { nome: "Conversa de 15 mensagens, ida e volta", categoria: "conversa", idadeMinDias: 8, idadeMaxDias: null, peso: 2 },
   { nome: "Responder uma mensagem antiga", categoria: "conversa", idadeMinDias: 15, idadeMaxDias: null, peso: 1 },
   // mídia — a partir do dia 8

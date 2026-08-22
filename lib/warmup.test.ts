@@ -7,6 +7,7 @@ import {
   faixaDe,
   faixaEfetiva,
   gerarTarefasDoDia,
+  hojeISO,
   idadeEmDias,
   sortearAcoes,
   type AcaoCatalogo,
@@ -18,6 +19,7 @@ const catalogo: AcaoCatalogo[] = [
   { id: 2, nome: "ficar online", categoria: "perfil", idadeMinDias: 0, idadeMaxDias: null, peso: 1 },
   { id: 3, nome: "conversa curta", categoria: "conversa", idadeMinDias: 4, idadeMaxDias: null, peso: 1 },
   { id: 4, nome: "mandar audio", categoria: "midia", idadeMinDias: 8, idadeMaxDias: null, peso: 1 },
+  { id: 5, nome: "chamada de voz", categoria: "midia", idadeMinDias: 15, idadeMaxDias: null, peso: 1 },
 ]
 
 // rng determinístico: devolve os valores da lista, em ordem, e repete o último.
@@ -26,9 +28,18 @@ function rngFixo(valores: number[]): () => number {
   return () => valores[Math.min(i++, valores.length - 1)]
 }
 
+// As datas de teste são construídas no fuso local de propósito: a idade e o
+// "hoje" do sistema são locais, porque `ativadaEm` vem de um input de data.
 test("idadeEmDias conta os dias entre a ativação e hoje", () => {
-  assert.equal(idadeEmDias("2026-08-01", new Date("2026-08-11T12:00:00Z")), 10)
-  assert.equal(idadeEmDias("2026-08-11", new Date("2026-08-11T23:00:00Z")), 0)
+  assert.equal(idadeEmDias("2026-08-01", new Date(2026, 7, 11, 12, 0)), 10)
+  assert.equal(idadeEmDias("2026-08-11", new Date(2026, 7, 11, 23, 0)), 0)
+})
+
+test("idadeEmDias e hojeISO usam a data local, não a UTC", () => {
+  // 22h30 do dia 22 num fuso a oeste de Greenwich já é dia 23 em UTC.
+  const noiteDoDia22 = new Date(2026, 7, 22, 22, 30)
+  assert.equal(hojeISO(noiteDoDia22), "2026-08-22")
+  assert.equal(idadeEmDias("2026-08-22", noiteDoDia22), 0)
 })
 
 test("faixaDe escolhe a faixa pela idade, inclusive nos limites", () => {
@@ -102,8 +113,14 @@ test("escolherPar devolve null quando não há candidata possível", () => {
 })
 
 test("gerarTarefasDoDia só dá par a ações de conversa", () => {
-  const hoje = new Date("2026-08-11T09:00:00Z")
-  const tarefas = gerarTarefasDoDia([contaA, contaC], catalogo, [], hoje, rngFixo([0]))
+  const hoje = new Date(2026, 7, 11, 9, 0)
+  const tarefas = gerarTarefasDoDia(
+    [contaA, contaC, contaD],
+    catalogo,
+    [],
+    hoje,
+    rngFixo([0]),
+  )
   for (const t of tarefas) {
     const acao = catalogo.find((a) => a.id === t.actionId)!
     if (acao.categoria === "conversa") assert.notEqual(t.parAccountId, null)
@@ -112,8 +129,51 @@ test("gerarTarefasDoDia só dá par a ações de conversa", () => {
 })
 
 test("gerarTarefasDoDia respeita a quantidade da faixa de cada conta", () => {
-  const hoje = new Date("2026-08-11T09:00:00Z")
+  const hoje = new Date(2026, 7, 11, 9, 0)
   const novinha: ContaParaSorteio = { id: 9, deviceId: "AP9", ativadaEm: "2026-08-10" }
   const tarefas = gerarTarefasDoDia([novinha], catalogo, [], hoje, rngFixo([0]))
   assert.equal(tarefas.length, 2)
+})
+
+test("gerarTarefasDoDia sorteia par contra todas as candidatas, não só quem ainda não tem tarefa", () => {
+  const hoje = new Date(2026, 7, 11, 9, 0)
+  // contaA é a única a sortear hoje; contaC já tem tarefa, mas segue sendo par possível.
+  const tarefas = gerarTarefasDoDia([contaA], catalogo, [], hoje, rngFixo([0]), [
+    contaA,
+    contaC,
+  ])
+  const conversa = tarefas.find((t) => t.parAccountId !== null)
+  assert.equal(conversa?.parAccountId, contaC.id)
+})
+
+test("gerarTarefasDoDia não repete o mesmo par em duas conversas do mesmo dia", () => {
+  const duasConversas: AcaoCatalogo[] = [
+    { id: 10, nome: "conversa 1", categoria: "conversa", idadeMinDias: 0, idadeMaxDias: null, peso: 1 },
+    { id: 11, nome: "conversa 2", categoria: "conversa", idadeMinDias: 0, idadeMaxDias: null, peso: 1 },
+  ]
+  const hoje = new Date(2026, 7, 11, 9, 0)
+  const tarefas = gerarTarefasDoDia([contaA], duasConversas, [], hoje, rngFixo([0]), [
+    contaA,
+    contaC,
+    contaD,
+  ])
+  assert.equal(tarefas.length, 2)
+  assert.notEqual(tarefas[0].parAccountId, tarefas[1].parAccountId)
+})
+
+test("recuo pós-restrição corta o que a conta pode fazer, não só quantas ações", () => {
+  const hoje = new Date(2026, 7, 21, 9, 0)
+  const veterana: ContaParaSorteio = {
+    id: 7,
+    deviceId: "AP7",
+    ativadaEm: "2026-08-01", // 20 dias: faixa 15-30 pela idade real
+    diasDesdeFimDeRestricao: 1, // recuou para a faixa 8-14
+  }
+  const tarefas = gerarTarefasDoDia([veterana], catalogo, [], hoje, rngFixo([0]))
+  assert.ok(
+    !tarefas.some((t) => t.actionId === 5),
+    "ação exclusiva da faixa 15-30 não pode sair para quem recuou para a 8-14",
+  )
+  // Só as três ações liberadas até o dia 14, mesmo com cota de 8.
+  assert.deepEqual(tarefas.map((t) => t.actionId).sort(), [2, 3, 4])
 })

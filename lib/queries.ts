@@ -67,21 +67,28 @@ export async function contasComIncidenteAberto(): Promise<ContaComIncidente[]> {
     .orderBy(desc(incident.inicio))
 }
 
+/**
+ * Chip livre é chip com status `novo`: ainda não gerou conta nenhuma. O local
+ * (pasta, gaveta, bandeja) não entra na conta — é só onde ele está guardado, e
+ * um chip da gaveta pode ativar uma conta hoje mesmo. Definição única: o painel
+ * conta e o cadastro lista exatamente estes.
+ */
+export async function chipsLivres() {
+  return db.select().from(chip).where(eq(chip.status, "novo")).orderBy(asc(chip.id))
+}
+
 export async function contadores() {
   const [aparelhos] = await db
     .select({ n: count() })
     .from(device)
     .where(eq(device.status, "ativo"))
-  const [chipsNaPasta] = await db
-    .select({ n: count() })
-    .from(chip)
-    .where(and(eq(chip.local, "pasta"), eq(chip.status, "novo")))
+  const livres = await chipsLivres()
   const saudaveis = await contasSaudaveis()
 
   return {
     aparelhosAtivos: aparelhos.n,
     contasSaudaveis: saudaveis.length,
-    chipsNaPasta: chipsNaPasta.n,
+    chipsLivres: livres.length,
   }
 }
 

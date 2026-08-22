@@ -45,10 +45,22 @@ export const FAIXAS: Faixa[] = [
 const DIAS_DE_RECUO_APOS_RESTRICAO = 7
 const MS_POR_DIA = 86_400_000
 
+/**
+ * A data de hoje no fuso do processo, em ISO. Única fonte da data corrente:
+ * `ativadaEm` vem de um `<input type="date">` local, então usar UTC faria o
+ * dia virar às 21h num fuso UTC-3 e sortear o aquecimento de amanhã.
+ */
+export function hojeISO(agora: Date = new Date()): string {
+  const doisDigitos = (n: number) => String(n).padStart(2, "0")
+  return `${agora.getFullYear()}-${doisDigitos(agora.getMonth() + 1)}-${doisDigitos(agora.getDate())}`
+}
+
 export function idadeEmDias(ativadaEm: string, hoje: Date): number {
-  const inicio = Date.parse(`${ativadaEm}T00:00:00Z`)
-  const fim = Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), hoje.getUTCDate())
-  return Math.max(0, Math.floor((fim - inicio) / MS_POR_DIA))
+  const [ano, mes, dia] = ativadaEm.split("-").map(Number)
+  const inicio = new Date(ano, mes - 1, dia).getTime()
+  const fim = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).getTime()
+  // round, não floor: o horário de verão pode encurtar ou esticar um dia.
+  return Math.max(0, Math.round((fim - inicio) / MS_POR_DIA))
 }
 
 function indiceDaFaixa(idadeDias: number): number {
@@ -129,26 +141,38 @@ export function escolherPar(
   return possiveis[Math.min(Math.floor(rng() * possiveis.length), possiveis.length - 1)].id
 }
 
+/**
+ * `candidatasAPar` são todas as contas saudáveis do dia, não só as que ainda
+ * não têm tarefa: quem é ativado depois da primeira geração do dia precisa
+ * sortear par contra a frota inteira, senão fica sem par.
+ */
 export function gerarTarefasDoDia(
   contas: ContaParaSorteio[],
   catalogo: AcaoCatalogo[],
   paresRecentes: Par[],
   hoje: Date,
   rng: () => number,
+  candidatasAPar: ContaParaSorteio[] = contas,
 ): TarefaSorteada[] {
   const tarefas: TarefaSorteada[] = []
+  // Os pares sorteados aqui contam como recentes para as escolhas seguintes,
+  // senão a mesma dupla se repete em várias conversas do mesmo dia.
+  const pares = [...paresRecentes]
+
   for (const conta of contas) {
     const idade = idadeEmDias(conta.ativadaEm, hoje)
     const faixa = faixaEfetiva(idade, conta.diasDesdeFimDeRestricao ?? null)
-    for (const acao of sortearAcoes(catalogo, idade, faixa.acoesPorDia, rng)) {
-      tarefas.push({
-        accountId: conta.id,
-        actionId: acao.id,
-        parAccountId:
-          acao.categoria === "conversa"
-            ? escolherPar(conta, contas, paresRecentes, rng)
-            : null,
-      })
+    // O recuo pós-restrição vale para o par inteiro (o que libera, quantas por
+    // dia): a conta que voltou não faz as ações da faixa alta, só menos delas.
+    const idadeElegivel = Math.min(idade, faixa.maxDias ?? idade)
+
+    for (const acao of sortearAcoes(catalogo, idadeElegivel, faixa.acoesPorDia, rng)) {
+      let parAccountId: number | null = null
+      if (acao.categoria === "conversa") {
+        parAccountId = escolherPar(conta, candidatasAPar, pares, rng)
+        if (parAccountId !== null) pares.push({ a: conta.id, b: parAccountId })
+      }
+      tarefas.push({ accountId: conta.id, actionId: acao.id, parAccountId })
     }
   }
   return tarefas

@@ -57,8 +57,8 @@ export default async function Page({
           <div className="text-muted-foreground">contas saudáveis</div>
         </div>
         <div>
-          <div className="text-2xl font-medium">{numeros.chipsNaPasta}</div>
-          <div className="text-muted-foreground">chips livres na pasta</div>
+          <div className="text-2xl font-medium">{numeros.chipsLivres}</div>
+          <div className="text-muted-foreground">chips livres</div>
         </div>
       </div>
 

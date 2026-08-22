@@ -1,4 +1,5 @@
-import { Geist, Geist_Mono, Inter } from "next/font/google"
+import { Geist_Mono, Inter } from "next/font/google"
+import Link from "next/link"
 
 import "./globals.css"
 import { Busca } from "@/components/busca"
@@ -26,12 +27,12 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <header className="flex items-center gap-6 border-b px-6 py-3 text-sm">
-            <a href="/" className="font-medium">
+            <Link href="/" className="font-medium">
               Contingência
-            </a>
+            </Link>
             <nav className="flex gap-4">
-              <a href="/aquecimento">Aquecimento</a>
-              <a href="/cadastro">Cadastro</a>
+              <Link href="/aquecimento">Aquecimento</Link>
+              <Link href="/cadastro">Cadastro</Link>
             </nav>
             <Busca />
           </header>

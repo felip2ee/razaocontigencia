@@ -24,6 +24,9 @@ const NOME_DO_SLOT: Record<string, string> = {
   business: "Business",
 }
 
+/** Todo aparelho tem estes três slots, ocupados ou não. */
+const SLOTS = ["wa1", "wa2", "business"] as const
+
 function duracao(inicio: Date, fim: Date | null): string {
   const horas = Math.floor(((fim ?? new Date()).getTime() - inicio.getTime()) / 3_600_000)
   if (horas < 24) return `${horas}h`
@@ -94,7 +97,31 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {ficha.contas.map((c) => (
+            {SLOTS.map((slot) => {
+              const c = ficha.contas.find((conta) => conta.slot === slot)
+
+              // Slot nunca ativado, ou liberado por ban perdido: o operador
+              // precisa ver a vaga, senão ela some da tela e da cabeça dele.
+              if (!c) {
+                return (
+                  <TableRow key={slot}>
+                    <TableCell>{NOME_DO_SLOT[slot]}</TableCell>
+                    <TableCell colSpan={3} className="text-muted-foreground">
+                      Slot livre
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">Livre</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Link href="/cadastro" className="underline">
+                        Ativar conta
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                )
+              }
+
+              return (
               <TableRow key={c.id}>
                 <TableCell>{NOME_DO_SLOT[c.slot]}</TableCell>
                 <TableCell>{c.numero}</TableCell>
@@ -129,7 +156,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                   )}
                 </TableCell>
               </TableRow>
-            ))}
+              )
+            })}
           </TableBody>
         </Table>
       </section>

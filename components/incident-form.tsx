@@ -1,10 +1,11 @@
+import { FormAcao } from "@/components/form-acao"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { encerrarIncidente, registrarIncidente, resolverBan } from "@/lib/actions"
 
 export function RegistrarIncidente({ accountId }: { accountId: number }) {
   return (
-    <form action={registrarIncidente} className="flex items-center gap-2">
+    <FormAcao acao={registrarIncidente} className="flex flex-wrap items-center gap-2">
       <input type="hidden" name="accountId" value={accountId} />
       <select
         name="tipo"
@@ -24,7 +25,7 @@ export function RegistrarIncidente({ accountId }: { accountId: number }) {
       <Button type="submit" size="sm" variant="outline">
         Registrar
       </Button>
-    </form>
+    </FormAcao>
   )
 }
 

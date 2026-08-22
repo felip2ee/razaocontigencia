@@ -1,7 +1,9 @@
+import { FormAcao } from "@/components/form-acao"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { gerarAquecimentoDeHoje, marcarTarefa } from "@/lib/actions"
 import { tarefasDoDia, type TarefaDoDia } from "@/lib/queries"
+import { hojeISO } from "@/lib/warmup"
 
 export const dynamic = "force-dynamic"
 
@@ -12,7 +14,7 @@ const NOME_DO_SLOT: Record<string, string> = {
 }
 
 export default async function Page() {
-  const dia = new Date().toISOString().slice(0, 10)
+  const dia = hojeISO()
   const tarefas = await tarefasDoDia(dia)
 
   const porAparelho = new Map<string, TarefaDoDia[]>()
@@ -31,14 +33,18 @@ export default async function Page() {
         <span className="text-muted-foreground text-sm">
           {pendentes} pendente(s) de {tarefas.length}
         </span>
-        <form action={gerarAquecimentoDeHoje} className="ml-auto">
+        <FormAcao
+          acao={gerarAquecimentoDeHoje}
+          className="ml-auto flex flex-wrap items-center justify-end gap-3"
+        >
           <Button type="submit">Gerar tarefas de hoje</Button>
-        </form>
+        </FormAcao>
       </header>
 
       {tarefas.length === 0 && (
         <p className="text-muted-foreground text-sm">
-          Nada sorteado ainda. Clique em &quot;Gerar tarefas de hoje&quot;.
+          Nada sorteado para hoje ({dia}). Clique em &quot;Gerar tarefas de hoje&quot; — a
+          mensagem ao lado do botão diz o que o sorteio encontrou.
         </p>
       )}
 

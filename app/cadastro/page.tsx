@@ -1,11 +1,13 @@
 import { asc, eq } from "drizzle-orm"
 
+import { FormAcao } from "@/components/form-acao"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ativarConta, criarAparelho, criarChip } from "@/lib/actions"
 import { db } from "@/lib/db"
-import { chip, device } from "@/lib/schema"
+import { chipsLivres } from "@/lib/queries"
+import { device } from "@/lib/schema"
 
 export const dynamic = "force-dynamic"
 
@@ -15,15 +17,11 @@ export default async function Page() {
     .from(device)
     .where(eq(device.status, "ativo"))
     .orderBy(asc(device.id))
-  const chipsLivres = await db
-    .select()
-    .from(chip)
-    .where(eq(chip.status, "novo"))
-    .orderBy(asc(chip.id))
+  const livres = await chipsLivres()
 
   return (
     <div className="grid gap-8 p-6 md:grid-cols-3">
-      <form action={criarAparelho} className="flex flex-col gap-3">
+      <FormAcao acao={criarAparelho} className="flex flex-col gap-3">
         <h2 className="font-medium">Novo aparelho</h2>
         <div className="grid gap-1.5">
           <Label htmlFor="ap-id">ID colado no aparelho</Label>
@@ -38,9 +36,9 @@ export default async function Page() {
           <Input id="ap-notas" name="notas" />
         </div>
         <Button type="submit">Cadastrar aparelho</Button>
-      </form>
+      </FormAcao>
 
-      <form action={criarChip} className="flex flex-col gap-3">
+      <FormAcao acao={criarChip} className="flex flex-col gap-3">
         <h2 className="font-medium">Novo chip</h2>
         <div className="grid gap-1.5">
           <Label htmlFor="ch-id">ID colado no chip</Label>
@@ -59,9 +57,9 @@ export default async function Page() {
           <Input id="ch-posicao" name="posicao" placeholder="pasta 2, folha 3" />
         </div>
         <Button type="submit">Cadastrar chip</Button>
-      </form>
+      </FormAcao>
 
-      <form action={ativarConta} className="flex flex-col gap-3">
+      <FormAcao acao={ativarConta} className="flex flex-col gap-3">
         <h2 className="font-medium">Ativar conta</h2>
         <div className="grid gap-1.5">
           <Label htmlFor="co-device">Aparelho</Label>
@@ -99,7 +97,7 @@ export default async function Page() {
             required
             className="border-input bg-background h-9 rounded-md border px-3 text-sm"
           >
-            {chipsLivres.map((c) => (
+            {livres.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.id} — {c.numero} ({c.operadora})
               </option>
@@ -111,7 +109,7 @@ export default async function Page() {
           <Input id="co-data" name="ativadaEm" type="date" required />
         </div>
         <Button type="submit">Ativar conta</Button>
-      </form>
+      </FormAcao>
     </div>
   )
 }
