@@ -1,5 +1,10 @@
 # Sistema de contingência de números de WhatsApp — plano de implementação
 
+> **CONCLUÍDO.** As oito tarefas foram implementadas e revisadas, e a revisão final da
+> branch inteira gerou uma rodada de 13 correções, todas verificadas (commits `76bd483`
+> e `42ad553`). Os achados reais que ficaram abertos de propósito estão em
+> [pendencias-conhecidas.md](../pendencias-conhecidas.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Substituir a agenda de papel e a fita adesiva por um sistema web local que cadastra aparelhos, chips e contas de WhatsApp, registra restrições e bans, e sorteia tarefas diárias de aquecimento por idade do número.
