@@ -25,15 +25,28 @@ function haQuantoTempo(desde: Date): string {
   return `${Math.floor(horas / 24)}d ${horas % 24}h`
 }
 
-export default async function Page() {
-  const [numeros, saudaveis, comIncidente] = await Promise.all([
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  const [numeros, saudaveis, comIncidente, params] = await Promise.all([
     contadores(),
     contasSaudaveis(),
     contasComIncidenteAberto(),
+    searchParams,
   ])
+  const naoEncontrado = params["nao-encontrado"]
+  const idNaoEncontrado = Array.isArray(naoEncontrado) ? naoEncontrado[0] : naoEncontrado
 
   return (
     <div className="flex flex-col gap-8 p-6">
+      {idNaoEncontrado && (
+        <div className="rounded-md border border-destructive/50 px-4 py-2 text-sm text-destructive">
+          ID não encontrado: {idNaoEncontrado}
+        </div>
+      )}
+
       <div className="flex gap-8 text-sm">
         <div>
           <div className="text-2xl font-medium">{numeros.aparelhosAtivos}</div>
