@@ -50,7 +50,7 @@
 
 ---
 
-## Task 1: Banco, schema e migration
+## Task 1: Banco, schema e migration — CONCLUÍDA (commit 9b8ed99, review limpa)
 
 **Files:**
 - Create: `docker-compose.yml`
@@ -64,14 +64,14 @@
 - Consumes: nada.
 - Produces: `lib/schema.ts` exporta as tabelas `device`, `chip`, `account`, `incident`, `warmupAction`, `warmupTask`. `lib/db.ts` exporta `db` (instância Drizzle) e reexporta `schema` como namespace.
 
-- [ ] **Step 1: Instalar dependências**
+- [x] **Step 1: Instalar dependências**
 
 ```bash
 npm install drizzle-orm pg
 npm install -D drizzle-kit @types/pg
 ```
 
-- [ ] **Step 2: Criar o docker-compose.yml**
+- [x] **Step 2: Criar o docker-compose.yml**
 
 ```yaml
 services:
@@ -92,18 +92,18 @@ volumes:
   contingencia-data:
 ```
 
-- [ ] **Step 3: Criar o .env.local**
+- [x] **Step 3: Criar o .env.local**
 
 ```
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/contingencia
 ```
 
-- [ ] **Step 4: Subir o banco**
+- [x] **Step 4: Subir o banco**
 
 Run: `docker compose up -d`
 Expected: container `contingencia-db` em execução. Confirmar com `docker compose ps`.
 
-- [ ] **Step 5: Escrever o schema**
+- [x] **Step 5: Escrever o schema**
 
 Criar `lib/schema.ts`:
 
@@ -224,7 +224,7 @@ export const warmupTask = pgTable(
 
 Três constraints carregam regra de negócio e merecem atenção: `account_slot_ativo` impede duas contas ativas no mesmo slot do mesmo aparelho; `account_chip_ativo` impede um chip servir duas contas ativas; `incident_aberto_unico` impede dois incidentes abertos na mesma conta. `warmup_task_unica` impede a mesma ação sortear duas vezes para a mesma conta no mesmo dia.
 
-- [ ] **Step 6: Criar o client**
+- [x] **Step 6: Criar o client**
 
 Criar `lib/db.ts`:
 
@@ -247,7 +247,7 @@ export { schema }
 
 O singleton em `globalThis` evita esgotar conexões durante o hot reload do `next dev`.
 
-- [ ] **Step 7: Configurar o drizzle-kit**
+- [x] **Step 7: Configurar o drizzle-kit**
 
 Criar `drizzle.config.ts`:
 
@@ -266,7 +266,7 @@ export default defineConfig({
 
 `process.loadEnvFile` é nativo do Node 24 — o drizzle-kit não lê `.env.local` sozinho e não vamos instalar `dotenv` para isso.
 
-- [ ] **Step 8: Adicionar scripts ao package.json**
+- [x] **Step 8: Adicionar scripts ao package.json**
 
 Dentro de `"scripts"`, acrescentar:
 
@@ -277,7 +277,7 @@ Dentro de `"scripts"`, acrescentar:
 "test": "node --test lib/warmup.test.ts"
 ```
 
-- [ ] **Step 9: Gerar e aplicar a migration**
+- [x] **Step 9: Gerar e aplicar a migration**
 
 Run: `npm run db:generate`
 Expected: um arquivo `.sql` novo em `drizzle/`.
@@ -285,7 +285,7 @@ Expected: um arquivo `.sql` novo em `drizzle/`.
 Run: `npm run db:migrate`
 Expected: aplica sem erro.
 
-- [ ] **Step 10: Verificar as tabelas e uma constraint**
+- [x] **Step 10: Verificar as tabelas e uma constraint**
 
 Run:
 
@@ -318,7 +318,7 @@ delete from device where id='TESTE';
 "
 ```
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add docker-compose.yml drizzle.config.ts drizzle lib/schema.ts lib/db.ts package.json package-lock.json
