@@ -107,3 +107,27 @@ export async function mudarStatusDoAparelho(formData: FormData) {
     .where(eq(device.id, texto(formData, "deviceId")))
   refresh()
 }
+
+/**
+ * Move o chip entre pasta, gaveta e bandeja de um aparelho. Os campos que não
+ * pertencem ao destino são zerados para o registro não mentir sobre onde o
+ * chip está.
+ */
+export async function moverChip(formData: FormData) {
+  const local = texto(formData, "local") as "pasta" | "gaveta" | "bandeja"
+  const deviceId = textoOpcional(formData, "bandejaDeviceId")
+
+  if (local === "bandeja" && !deviceId) {
+    throw new Error("Escolha o aparelho da bandeja")
+  }
+
+  await db
+    .update(chip)
+    .set({
+      local,
+      bandejaDeviceId: local === "bandeja" ? deviceId : null,
+      posicao: local === "pasta" ? textoOpcional(formData, "posicao") : null,
+    })
+    .where(eq(chip.id, texto(formData, "chipId")))
+  refresh()
+}
