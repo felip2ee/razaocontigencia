@@ -877,7 +877,7 @@ git commit -m "feat: painel com acoes de incidente e filtro"
 
 ---
 
-## Task 4: Aquecimento
+## Task 4: Aquecimento — CONCLUÍDA (commits b48551e + fix c8896ec, review limpa)
 
 **Files:**
 - Modify: `app/aquecimento/page.tsx`
@@ -886,7 +886,7 @@ git commit -m "feat: painel com acoes de incidente e filtro"
 - Consumes: `PageHeader`, `EmptyState`, `StatCard`; `tarefasDoDia` e `gerarAquecimentoDeHoje`/`marcarTarefa`, todos inalterados.
 - Produces: nada para outras tarefas.
 
-- [ ] **Step 1: Reescrever a tela**
+- [x] **Step 1: Reescrever a tela**
 
 Substituir `app/aquecimento/page.tsx` por:
 
@@ -1055,7 +1055,7 @@ O `<details>` nativo dá o recolher sem uma linha de JavaScript e sem componente
 
 O aviso devolvido por `gerarAquecimentoDeHoje` (nenhuma conta saudável, todas já com tarefa, nenhuma ação elegível) é exibido pelo próprio `FormAcao`, que já trata o estado retornado pela action. Confirme lendo `components/form-acao.tsx` antes de escrever, e não duplique essa exibição.
 
-- [ ] **Step 2: Verificar**
+- [x] **Step 2: Verificar**
 
 Run: `npx tsc --noEmit`, `npm run lint`, `npm run build`
 Expected: sem erro; `/aquecimento` como `ƒ`.
@@ -1067,7 +1067,7 @@ No browser:
 - marcar **todas** as tarefas de um aparelho fecha aquele card sozinho e troca o ícone para o verde de concluído;
 - clicar em gerar de novo, com tudo já sorteado, mostra o aviso da action em vez de silêncio.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/aquecimento/page.tsx
