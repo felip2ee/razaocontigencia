@@ -17,24 +17,11 @@ import {
 } from "@/components/ui/table"
 import { mudarStatusDoAparelho } from "@/lib/actions"
 import { fichaDoAparelho } from "@/lib/queries"
+import { NOME_DO_SLOT, SLOTS } from "@/lib/slots"
+import { tempoDecorrido } from "@/lib/tempo"
 import { idadeEmDias } from "@/lib/warmup"
 
 export const dynamic = "force-dynamic"
-
-const NOME_DO_SLOT: Record<string, string> = {
-  wa1: "WhatsApp 1",
-  wa2: "WhatsApp 2",
-  business: "Business",
-}
-
-/** Todo aparelho tem estes três slots, ocupados ou não. */
-const SLOTS = ["wa1", "wa2", "business"] as const
-
-function duracao(inicio: Date, fim: Date | null): string {
-  const horas = Math.floor(((fim ?? new Date()).getTime() - inicio.getTime()) / 3_600_000)
-  if (horas < 24) return `${horas}h`
-  return `${Math.floor(horas / 24)}d ${horas % 24}h`
-}
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -156,7 +143,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 />
                 {c.incidenteAberto && (
                   <span className="text-muted-foreground text-xs tabular-nums">
-                    há {duracao(c.incidenteAberto.inicio, null)}
+                    há {tempoDecorrido(c.incidenteAberto.inicio)}
                   </span>
                 )}
               </div>
@@ -213,7 +200,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                       {h.inicio.toLocaleString("pt-BR")}
                     </TableCell>
                     <TableCell className="tabular-nums">
-                      {h.fim ? duracao(h.inicio, h.fim) : "em curso"}
+                      {h.fim ? tempoDecorrido(h.inicio, h.fim) : "em curso"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {h.resultado ?? "—"}

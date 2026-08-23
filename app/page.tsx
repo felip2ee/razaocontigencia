@@ -16,22 +16,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { contadores, contasComIncidenteAberto, contasSaudaveis } from "@/lib/queries"
+import { NOME_DO_SLOT } from "@/lib/slots"
+import { tempoDecorrido } from "@/lib/tempo"
 
 export const dynamic = "force-dynamic"
-
-const NOME_DO_SLOT: Record<string, string> = {
-  wa1: "WhatsApp 1",
-  wa2: "WhatsApp 2",
-  business: "Business",
-}
-
-function haQuantoTempo(desde: Date): string {
-  const minutos = Math.floor((Date.now() - desde.getTime()) / 60_000)
-  if (minutos < 60) return `${minutos}min`
-  const horas = Math.floor(minutos / 60)
-  if (horas < 24) return `${horas}h`
-  return `${Math.floor(horas / 24)}d ${horas % 24}h`
-}
 
 function texto(valor: string | string[] | undefined): string | undefined {
   return Array.isArray(valor) ? valor[0] : valor
@@ -137,7 +125,7 @@ export default async function Page({
                     <TableCell>
                       <StatusBadge estado={c.tipo === "ban" ? "ban" : "restricao"} />
                     </TableCell>
-                    <TableCell className="tabular-nums">{haQuantoTempo(c.inicio)}</TableCell>
+                    <TableCell className="tabular-nums">{tempoDecorrido(c.inicio)}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {c.resultado ?? "—"}
                     </TableCell>

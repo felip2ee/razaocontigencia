@@ -11,15 +11,11 @@ import { Label } from "@/components/ui/label"
 import { moverChip } from "@/lib/actions"
 import { db } from "@/lib/db"
 import { fichaDoChip } from "@/lib/queries"
+import { NOME_DO_SLOT } from "@/lib/slots"
+import { dataBR } from "@/lib/tempo"
 import { device } from "@/lib/schema"
 
 export const dynamic = "force-dynamic"
-
-const NOME_DO_SLOT: Record<string, string> = {
-  wa1: "WhatsApp 1",
-  wa2: "WhatsApp 2",
-  business: "Business",
-}
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -136,7 +132,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                   {ficha.conta.deviceId}
                 </Link>{" "}
                 — {NOME_DO_SLOT[ficha.conta.slot]} — ativada em{" "}
-                <span className="tabular-nums">{ficha.conta.ativadaEm}</span> —{" "}
+                <span className="tabular-nums">{dataBR(ficha.conta.ativadaEm)}</span> —{" "}
                 {ficha.conta.status}
               </span>
             ) : (

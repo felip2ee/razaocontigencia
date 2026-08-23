@@ -6,15 +6,10 @@ import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import { gerarAquecimentoDeHoje, marcarTarefa } from "@/lib/actions"
 import { tarefasDoDia, type TarefaDoDia } from "@/lib/queries"
+import { NOME_DO_SLOT } from "@/lib/slots"
 import { hojeISO } from "@/lib/warmup"
 
 export const dynamic = "force-dynamic"
-
-const NOME_DO_SLOT: Record<string, string> = {
-  wa1: "WhatsApp 1",
-  wa2: "WhatsApp 2",
-  business: "Business",
-}
 
 export default async function Page() {
   const tarefas = await tarefasDoDia(hojeISO())
@@ -104,7 +99,7 @@ export default async function Page() {
                   key={t.id}
                   className="border-border flex flex-wrap items-center gap-3 border-b px-4 py-2.5 text-sm last:border-b-0"
                 >
-                  <span className="text-muted-foreground w-24 shrink-0 text-xs">
+                  <span className="text-muted-foreground w-32 shrink-0 text-xs">
                     {NOME_DO_SLOT[t.slot]}
                   </span>
                   <span className="w-32 shrink-0 tabular-nums">{t.numero}</span>

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { ativarConta, criarAparelho, criarChip } from "@/lib/actions"
 import { db } from "@/lib/db"
 import { chipsLivres } from "@/lib/queries"
+import { NOME_DO_SLOT } from "@/lib/slots"
 import { device } from "@/lib/schema"
 
 export const dynamic = "force-dynamic"
@@ -107,9 +108,9 @@ export default async function Page() {
                 required
                 className="border-input bg-background h-9 rounded-md border px-3 text-sm"
               >
-                <option value="wa1">WhatsApp 1</option>
-                <option value="wa2">WhatsApp 2</option>
-                <option value="business">WhatsApp Business</option>
+                <option value="wa1">{NOME_DO_SLOT.wa1}</option>
+                <option value="wa2">{NOME_DO_SLOT.wa2}</option>
+                <option value="business">{NOME_DO_SLOT.business}</option>
               </select>
             </div>
             <div className="grid gap-1.5">
