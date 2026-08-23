@@ -17,7 +17,7 @@
 - **Nenhuma dependência nova.** Nenhuma biblioteca de validação, de gráfico, de animação ou de ícone além do Lucide já instalado.
 - **Nenhum componente escreve cor à mão.** Toda cor vem de token: `bg-primary`, `text-muted-foreground`, `border-border`, `bg-sidebar`, `text-status-ok` e afins. Um `text-blue-600` no meio de um componente é defeito.
 - **Apenas tema claro.** `next-themes` e `components/theme-provider.tsx` saem do projeto.
-- **Server Components por padrão.** `components/relogio.tsx` é o único `"use client"` novo permitido. Os já existentes (`form-acao.tsx`) continuam como estão.
+- **Server Components por padrão.** Exatamente dois `"use client"` novos são permitidos, e nenhum além deles: `components/relogio.tsx` (precisa de temporizador) e `components/app-sidebar.tsx` (precisa de `usePathname` para marcar o item ativo). Os já existentes (`form-acao.tsx`) continuam como estão.
 - Rótulos em português. `lib/` usa import relativo com extensão; `app/` e `components/` usam alias `@/`.
 - Nenhuma mudança em `lib/schema.ts`, `lib/warmup.ts`, `lib/seed.ts`, nas migrations, nem no comportamento de qualquer Server Action existente.
 - Azul da marca Nova Digital: **`#0051FA`**, extraído dos arquivos de logo. Em oklch: `oklch(0.522 0.258 262.8)`.
