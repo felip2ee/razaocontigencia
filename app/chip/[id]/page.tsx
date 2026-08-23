@@ -1,7 +1,9 @@
 import { asc, eq } from "drizzle-orm"
+import { Archive, FolderOpen, Smartphone, TriangleAlert } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { PageHeader } from "@/components/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,97 +32,174 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     .where(eq(device.status, "ativo"))
     .orderBy(asc(device.id))
 
-  return (
-    <div className="flex max-w-2xl flex-col gap-8 p-6">
-      <header className="flex items-center gap-4">
-        <h1 className="text-xl font-medium">{ficha.chip.id}</h1>
-        <span className="text-muted-foreground">
-          {ficha.chip.numero} — {ficha.chip.operadora}
-        </span>
-        <Badge variant={ficha.chip.status === "aposentado" ? "destructive" : "secondary"}>
-          {ficha.chip.status}
-        </Badge>
-      </header>
-
-      <section className="text-sm">
-        <h2 className="mb-1 font-medium">Onde está</h2>
-        {ficha.chip.local === "bandeja" && ficha.aparelhoDaBandeja ? (
-          <p>
+  // A pergunta que esta tela existe para responder. Os quatro ramos são
+  // exaustivos de propósito: `bandeja` sem aparelho encontrado tem de dizer
+  // isso em voz alta, senão o registro mente sobre onde o chip está.
+  const localizacao =
+    ficha.chip.local === "bandeja" && ficha.aparelhoDaBandeja ? (
+      <>
+        <Smartphone className="text-muted-foreground mt-1 size-6 shrink-0" />
+        <div>
+          <p className="text-2xl leading-tight font-semibold">
             Na bandeja do aparelho{" "}
-            <Link href={`/aparelho/${ficha.aparelhoDaBandeja.id}`} className="underline">
+            <Link
+              href={`/aparelho/${ficha.aparelhoDaBandeja.id}`}
+              className="hover:text-primary underline underline-offset-4"
+            >
               {ficha.aparelhoDaBandeja.id}
-            </Link>{" "}
-            (chip de rede, 4G).
+            </Link>
           </p>
-        ) : ficha.chip.local === "gaveta" ? (
-          <p>Na gaveta.</p>
-        ) : (
-          <p>Na pasta{ficha.chip.posicao ? ` — ${ficha.chip.posicao}` : ""}.</p>
-        )}
+          <p className="text-muted-foreground mt-1 text-sm">Chip de rede, 4G.</p>
+        </div>
+      </>
+    ) : ficha.chip.local === "bandeja" ? (
+      <>
+        <TriangleAlert className="text-destructive mt-1 size-6 shrink-0" />
+        <div>
+          <p className="text-2xl leading-tight font-semibold">
+            Na bandeja de um aparelho que não existe mais
+          </p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {ficha.chip.bandejaDeviceId ? (
+              <>
+                O registro aponta para o aparelho{" "}
+                <span className="font-medium">{ficha.chip.bandejaDeviceId}</span>, que não
+                está no cadastro.
+              </>
+            ) : (
+              <>O registro não diz em qual aparelho.</>
+            )}{" "}
+            Mova o chip para dizer onde ele está de verdade.
+          </p>
+        </div>
+      </>
+    ) : ficha.chip.local === "gaveta" ? (
+      <>
+        <Archive className="text-muted-foreground mt-1 size-6 shrink-0" />
+        <div>
+          <p className="text-2xl leading-tight font-semibold">Na gaveta</p>
+          <p className="text-muted-foreground mt-1 text-sm">Fora de uso, guardado.</p>
+        </div>
+      </>
+    ) : (
+      <>
+        <FolderOpen className="text-muted-foreground mt-1 size-6 shrink-0" />
+        <div>
+          <p className="text-2xl leading-tight font-semibold">
+            Na pasta{ficha.chip.posicao ? ` — ${ficha.chip.posicao}` : ""}
+          </p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {ficha.chip.posicao
+              ? "Fazenda de SMS."
+              : "Fazenda de SMS, sem posição anotada."}
+          </p>
+        </div>
+      </>
+    )
+
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        titulo={ficha.chip.id}
+        subtitulo={`${ficha.chip.numero} — ${ficha.chip.operadora}`}
+      />
+
+      <section className="bg-card border-border rounded-xl border p-6">
+        <div className="text-muted-foreground text-xs tracking-wide uppercase">
+          Onde está
+        </div>
+        <div className="mt-3 flex items-start gap-3">{localizacao}</div>
       </section>
 
-      <section className="text-sm">
-        <h2 className="mb-1 font-medium">Conta gerada</h2>
-        {ficha.conta ? (
-          <p>
-            <Link href={`/aparelho/${ficha.conta.deviceId}`} className="underline">
-              {ficha.conta.deviceId}
-            </Link>{" "}
-            — {NOME_DO_SLOT[ficha.conta.slot]} — ativada em {ficha.conta.ativadaEm} —{" "}
-            {ficha.conta.status}
-          </p>
-        ) : (
-          <p className="text-muted-foreground">
-            Nenhuma conta usa este chip. É um chip de rede ou está reservado.
-          </p>
-        )}
+      <section className="bg-card border-border flex flex-wrap items-start gap-x-10 gap-y-4 rounded-xl border px-4 py-3 text-sm">
+        <div>
+          <div className="text-muted-foreground text-xs tracking-wide uppercase">
+            Status
+          </div>
+          <div className="mt-1">
+            <Badge variant={ficha.chip.status === "aposentado" ? "destructive" : "secondary"}>
+              {ficha.chip.status}
+            </Badge>
+          </div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs tracking-wide uppercase">
+            Conta gerada
+          </div>
+          <div className="mt-1">
+            {ficha.conta ? (
+              <span>
+                <Link
+                  href={`/aparelho/${ficha.conta.deviceId}`}
+                  className="hover:text-primary font-medium"
+                >
+                  {ficha.conta.deviceId}
+                </Link>{" "}
+                — {NOME_DO_SLOT[ficha.conta.slot]} — ativada em{" "}
+                <span className="tabular-nums">{ficha.conta.ativadaEm}</span> —{" "}
+                {ficha.conta.status}
+              </span>
+            ) : (
+              <span className="text-muted-foreground">
+                Nenhuma conta usa este chip. É um chip de rede ou está reservado.
+              </span>
+            )}
+          </div>
+        </div>
       </section>
 
-      <form action={moverChip} className="flex flex-col gap-3">
-        <h2 className="font-medium">Mover</h2>
-        <input type="hidden" name="chipId" value={ficha.chip.id} />
-        <div className="grid gap-1.5">
-          <Label htmlFor="mv-local">Destino</Label>
-          <select
-            id="mv-local"
-            name="local"
-            defaultValue={ficha.chip.local}
-            className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-          >
-            <option value="pasta">Pasta (fazenda de SMS)</option>
-            <option value="gaveta">Gaveta</option>
-            <option value="bandeja">Bandeja de um aparelho</option>
-          </select>
+      <section className="bg-card border-border rounded-xl border">
+        <div className="border-border border-b px-4 py-3">
+          <h2 className="font-medium">Mover</h2>
+          <p className="text-muted-foreground mt-0.5 text-sm">
+            Só o campo do destino escolhido é guardado; os outros são apagados.
+          </p>
         </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="mv-posicao">Posição na pasta</Label>
-          <Input
-            id="mv-posicao"
-            name="posicao"
-            defaultValue={ficha.chip.posicao ?? ""}
-            placeholder="pasta 2, folha 3"
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="mv-device">Aparelho da bandeja</Label>
-          <select
-            id="mv-device"
-            name="bandejaDeviceId"
-            defaultValue={ficha.chip.bandejaDeviceId ?? ""}
-            className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-          >
-            <option value="">—</option>
-            {aparelhos.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.id} {a.apelido ? `— ${a.apelido}` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-        <Button type="submit" className="self-start">
-          Mover chip
-        </Button>
-      </form>
+        <form action={moverChip} className="flex max-w-md flex-col gap-3 p-4">
+          <input type="hidden" name="chipId" value={ficha.chip.id} />
+          <div className="grid gap-1.5">
+            <Label htmlFor="mv-local">Destino</Label>
+            <select
+              id="mv-local"
+              name="local"
+              defaultValue={ficha.chip.local}
+              className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+            >
+              <option value="pasta">Pasta (fazenda de SMS)</option>
+              <option value="gaveta">Gaveta</option>
+              <option value="bandeja">Bandeja de um aparelho</option>
+            </select>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="mv-posicao">Posição na pasta</Label>
+            <Input
+              id="mv-posicao"
+              name="posicao"
+              defaultValue={ficha.chip.posicao ?? ""}
+              placeholder="pasta 2, folha 3"
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="mv-device">Aparelho da bandeja</Label>
+            <select
+              id="mv-device"
+              name="bandejaDeviceId"
+              defaultValue={ficha.chip.bandejaDeviceId ?? ""}
+              className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+            >
+              <option value="">—</option>
+              {aparelhos.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.id} {a.apelido ? `— ${a.apelido}` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Button type="submit" className="self-start">
+            Mover chip
+          </Button>
+        </form>
+      </section>
     </div>
   )
 }

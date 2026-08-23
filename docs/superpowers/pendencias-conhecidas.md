@@ -40,11 +40,6 @@ fita digitado em minúscula cai em "não encontrado".
 **`marcarTarefa` grava `feitoEm` também quando a tarefa é pulada**, o que torna o campo
 ambíguo se algum dia for usado para medir execução.
 
-**Chip na bandeja de aparelho inexistente exibe "Na pasta".** Em `app/chip/[id]/page.tsx`,
-se `local = 'bandeja'` mas o aparelho não for encontrado, o ternário cai no ramo final e
-mente sobre o local. Inalcançável pela aplicação (a chave estrangeira impede apagar um
-aparelho referenciado); só por manipulação direta do banco.
-
 **`app/error.tsx` mostra `error.message`**, que o Next redige em build de produção. É a
 rede de segurança; o caminho principal das mensagens de constraint passa por `FormAcao` e
 não depende disso.
