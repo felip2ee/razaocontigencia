@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/empty-state"
 import { FormAcao } from "@/components/form-acao"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
-import { gerarAquecimentoDeHoje, marcarTarefa, type EstadoDoForm } from "@/lib/actions"
+import { gerarAquecimentoDeHoje, marcarTarefa } from "@/lib/actions"
 import { tarefasDoDia, type TarefaDoDia } from "@/lib/queries"
 import { hojeISO } from "@/lib/warmup"
 
@@ -14,18 +14,6 @@ const NOME_DO_SLOT: Record<string, string> = {
   wa1: "WhatsApp 1",
   wa2: "WhatsApp 2",
   business: "Business",
-}
-
-// marcarTarefa recebe só o FormData; o FormAcao espera (estado, formData) para
-// devolver o EstadoDoForm na tela. O adaptador mora aqui, não em lib/, porque a
-// action original é usada em outros lugares com a assinatura de 1 argumento.
-async function marcarTarefaAcao(
-  _estado: EstadoDoForm,
-  formData: FormData,
-): Promise<EstadoDoForm> {
-  "use server"
-  await marcarTarefa(formData)
-  return null
 }
 
 export default async function Page() {
@@ -131,20 +119,20 @@ export default async function Page() {
                   </span>
                   {t.status === "pendente" ? (
                     <div className="flex gap-2">
-                      <FormAcao acao={marcarTarefaAcao}>
+                      <form action={marcarTarefa}>
                         <input type="hidden" name="tarefaId" value={t.id} />
                         <input type="hidden" name="status" value="feito" />
                         <Button type="submit" size="sm">
                           Feito
                         </Button>
-                      </FormAcao>
-                      <FormAcao acao={marcarTarefaAcao}>
+                      </form>
+                      <form action={marcarTarefa}>
                         <input type="hidden" name="tarefaId" value={t.id} />
                         <input type="hidden" name="status" value="pulado" />
                         <Button type="submit" size="sm" variant="outline">
                           Pular
                         </Button>
-                      </FormAcao>
+                      </form>
                     </div>
                   ) : (
                     <span
