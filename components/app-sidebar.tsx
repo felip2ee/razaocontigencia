@@ -42,7 +42,7 @@ export function AppSidebar() {
       <nav className="flex flex-col gap-6 px-3 py-2">
         {GRUPOS.map((grupo) => (
           <div key={grupo.rotulo} className="flex flex-col gap-1">
-            <div className="text-sidebar-foreground/60 px-2 pb-1 text-[0.6875rem] font-medium tracking-wider uppercase">
+            <div className="text-sidebar-foreground/80 px-2 pb-1 text-[0.6875rem] font-medium tracking-wider uppercase">
               {grupo.rotulo}
             </div>
             {grupo.itens.map(({ href, nome, Icone }) => {

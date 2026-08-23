@@ -75,10 +75,12 @@
     --radius: 0.625rem;
 
     /* Status. Não são cores de marca: comunicam estado e por isso fogem do
-       neutro de propósito. */
-    --status-ok: oklch(0.627 0.170 149.2);
-    --status-restricao: oklch(0.666 0.157 58.3);
-    --status-ban: oklch(0.577 0.245 27.325);
+       neutro de propósito. A luminosidade é escolhida para passar de 4,5:1
+       tanto como texto sobre fundo claro quanto dentro do StatusBadge, onde o
+       fundo é a própria cor a 10% — medido, não estimado. */
+    --status-ok: oklch(0.480 0.170 149.2);
+    --status-restricao: oklch(0.515 0.157 58.3);
+    --status-ban: oklch(0.495 0.245 27.325);
 
     /* Sidebar escura contra o corpo claro. */
     --sidebar: oklch(0.145 0.002 286.1);
