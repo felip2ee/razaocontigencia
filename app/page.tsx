@@ -1,6 +1,12 @@
+import { CircuitBoard, Search, ShieldAlert, ShieldCheck, Smartphone } from "lucide-react"
 import Link from "next/link"
 
-import { Badge } from "@/components/ui/badge"
+import { EmptyState } from "@/components/empty-state"
+import { EncerrarIncidente } from "@/components/incident-form"
+import { PageHeader } from "@/components/page-header"
+import { StatCard } from "@/components/stat-card"
+import { StatusBadge } from "@/components/status-badge"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -20,9 +26,15 @@ const NOME_DO_SLOT: Record<string, string> = {
 }
 
 function haQuantoTempo(desde: Date): string {
-  const horas = Math.floor((Date.now() - desde.getTime()) / 3_600_000)
+  const minutos = Math.floor((Date.now() - desde.getTime()) / 60_000)
+  if (minutos < 60) return `${minutos}min`
+  const horas = Math.floor(minutos / 60)
   if (horas < 24) return `${horas}h`
   return `${Math.floor(horas / 24)}d ${horas % 24}h`
+}
+
+function texto(valor: string | string[] | undefined): string | undefined {
+  return Array.isArray(valor) ? valor[0] : valor
 }
 
 export default async function Page({
@@ -30,113 +42,186 @@ export default async function Page({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  const [numeros, saudaveis, comIncidente, params] = await Promise.all([
+  const params = await searchParams
+  const idNaoEncontrado = texto(params["nao-encontrado"])
+  const filtro = texto(params.filtro)
+
+  const [numeros, saudaveis, comIncidente] = await Promise.all([
     contadores(),
-    contasSaudaveis(),
+    contasSaudaveis(filtro),
     contasComIncidenteAberto(),
-    searchParams,
   ])
-  const naoEncontrado = params["nao-encontrado"]
-  const idNaoEncontrado = Array.isArray(naoEncontrado) ? naoEncontrado[0] : naoEncontrado
 
   return (
-    <div className="flex flex-col gap-8 p-6">
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        titulo="Painel"
+        subtitulo="O que está no ar, o que caiu e o que precisa de você agora."
+      />
+
       {idNaoEncontrado && (
-        <div className="rounded-md border border-destructive/50 px-4 py-2 text-sm text-destructive">
-          ID não encontrado: {idNaoEncontrado}
+        <div className="border-destructive/40 bg-destructive/5 text-destructive rounded-lg border px-4 py-2.5 text-sm">
+          Nenhum aparelho ou chip com o ID <strong>{idNaoEncontrado}</strong>.
         </div>
       )}
 
-      <div className="flex gap-8 text-sm">
-        <div>
-          <div className="text-2xl font-medium">{numeros.aparelhosAtivos}</div>
-          <div className="text-muted-foreground">aparelhos ativos</div>
-        </div>
-        <div>
-          <div className="text-2xl font-medium">{numeros.contasSaudaveis}</div>
-          <div className="text-muted-foreground">contas saudáveis</div>
-        </div>
-        <div>
-          <div className="text-2xl font-medium">{numeros.chipsLivres}</div>
-          <div className="text-muted-foreground">chips livres</div>
-        </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          rotulo="Aparelhos"
+          valor={numeros.aparelhosAtivos}
+          detalhe="em circulação"
+          Icone={Smartphone}
+        />
+        <StatCard
+          rotulo="Contas saudáveis"
+          valor={numeros.contasSaudaveis}
+          detalhe="prontas para uso"
+          Icone={ShieldCheck}
+        />
+        <StatCard
+          rotulo="Fora do ar"
+          valor={comIncidente.length}
+          detalhe="com restrição ou ban aberto"
+          Icone={ShieldAlert}
+        />
+        <StatCard
+          rotulo="Chips livres"
+          valor={numeros.chipsLivres}
+          detalhe="disponíveis para ativar"
+          Icone={CircuitBoard}
+        />
       </div>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="font-medium">Fora do ar ({comIncidente.length})</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Aparelho</TableHead>
-              <TableHead>Slot</TableHead>
-              <TableHead>Número</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Há quanto tempo</TableHead>
-              <TableHead>Análise</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {comIncidente.map((c) => (
-              <TableRow key={c.incidentId}>
-                <TableCell>
-                  <Link href={`/aparelho/${c.deviceId}`} className="underline">
-                    {c.deviceId}
-                  </Link>
-                </TableCell>
-                <TableCell>{NOME_DO_SLOT[c.slot]}</TableCell>
-                <TableCell>{c.numero}</TableCell>
-                <TableCell>
-                  <Badge variant={c.tipo === "ban" ? "destructive" : "secondary"}>
-                    {c.tipo === "ban" ? "Ban" : "Restrição"}
-                  </Badge>
-                </TableCell>
-                <TableCell>{haQuantoTempo(c.inicio)}</TableCell>
-                <TableCell>{c.resultado ?? "—"}</TableCell>
-              </TableRow>
-            ))}
-            {comIncidente.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-muted-foreground">
-                  Nada restrito no momento.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+      <section className="bg-card border-border overflow-hidden rounded-xl border">
+        <div className="border-border flex items-center justify-between border-b px-4 py-3">
+          <h2 className="font-medium">Precisa de você</h2>
+          <span className="text-muted-foreground text-sm tabular-nums">
+            {comIncidente.length}
+          </span>
+        </div>
+        {comIncidente.length === 0 ? (
+          <EmptyState
+            Icone={ShieldCheck}
+            titulo="Nada fora do ar"
+            descricao="Nenhuma conta está com restrição ou ban aberto."
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Aparelho</TableHead>
+                  <TableHead>Slot</TableHead>
+                  <TableHead>Número</TableHead>
+                  <TableHead>Situação</TableHead>
+                  <TableHead>Há</TableHead>
+                  <TableHead>Análise</TableHead>
+                  <TableHead className="text-right">Ação</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {comIncidente.map((c) => (
+                  <TableRow key={c.incidentId}>
+                    <TableCell>
+                      <Link
+                        href={`/aparelho/${c.deviceId}`}
+                        className="hover:text-primary font-medium"
+                      >
+                        {c.deviceId}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {NOME_DO_SLOT[c.slot]}
+                    </TableCell>
+                    <TableCell className="tabular-nums">{c.numero}</TableCell>
+                    <TableCell>
+                      <StatusBadge estado={c.tipo === "ban" ? "ban" : "restricao"} />
+                    </TableCell>
+                    <TableCell className="tabular-nums">{haQuantoTempo(c.inicio)}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {c.resultado ?? "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end">
+                        <EncerrarIncidente incidentId={c.incidentId} tipo={c.tipo} />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </section>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="font-medium">Saudáveis ({saudaveis.length})</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Aparelho</TableHead>
-              <TableHead>Slot</TableHead>
-              <TableHead>Número</TableHead>
-              <TableHead>Operadora</TableHead>
-              <TableHead>Chip</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {saudaveis.map((c) => (
-              <TableRow key={c.id}>
-                <TableCell>
-                  <Link href={`/aparelho/${c.deviceId}`} className="underline">
-                    {c.deviceId}
-                  </Link>
-                </TableCell>
-                <TableCell>{NOME_DO_SLOT[c.slot]}</TableCell>
-                <TableCell>{c.numero}</TableCell>
-                <TableCell>{c.operadora}</TableCell>
-                <TableCell>
-                  <Link href={`/chip/${c.chipId}`} className="underline">
-                    {c.chipId}
-                  </Link>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      <section className="bg-card border-border overflow-hidden rounded-xl border">
+        <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+          <h2 className="font-medium">
+            Saudáveis{" "}
+            <span className="text-muted-foreground font-normal tabular-nums">
+              ({saudaveis.length})
+            </span>
+          </h2>
+          <form className="relative">
+            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+            <Input
+              name="filtro"
+              defaultValue={filtro ?? ""}
+              placeholder="Filtrar por aparelho, número ou chip"
+              className="h-9 w-72 pl-8"
+              aria-label="Filtrar contas saudáveis"
+            />
+          </form>
+        </div>
+        {saudaveis.length === 0 ? (
+          <EmptyState
+            Icone={Search}
+            titulo={filtro ? "Nada encontrado" : "Nenhuma conta ativa"}
+            descricao={
+              filtro
+                ? `Nenhuma conta saudável combina com "${filtro}".`
+                : "Ative uma conta no cadastro para começar."
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Aparelho</TableHead>
+                  <TableHead>Slot</TableHead>
+                  <TableHead>Número</TableHead>
+                  <TableHead>Operadora</TableHead>
+                  <TableHead>Chip</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {saudaveis.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell>
+                      <Link
+                        href={`/aparelho/${c.deviceId}`}
+                        className="hover:text-primary font-medium"
+                      >
+                        {c.deviceId}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {NOME_DO_SLOT[c.slot]}
+                    </TableCell>
+                    <TableCell className="tabular-nums">{c.numero}</TableCell>
+                    <TableCell className="text-muted-foreground">{c.operadora}</TableCell>
+                    <TableCell>
+                      <Link href={`/chip/${c.chipId}`} className="hover:text-primary">
+                        {c.chipId}
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </section>
     </div>
   )

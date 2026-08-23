@@ -37,17 +37,27 @@ export async function listarCatalogo(): Promise<AcaoCatalogo[]> {
 }
 
 /** Contas ativas sem nenhum incidente aberto. */
-export async function contasSaudaveis(): Promise<ContaNaLista[]> {
+export async function contasSaudaveis(filtro?: string): Promise<ContaNaLista[]> {
   const abertos = db
     .select({ accountId: incident.accountId })
     .from(incident)
     .where(isNull(incident.fim))
 
+  const termo = filtro?.trim()
+  const condicoes = [eq(account.status, "ativa"), sql`${account.id} not in ${abertos}`]
+
+  if (termo) {
+    const alvo = `%${termo}%`
+    condicoes.push(
+      sql`(${account.deviceId} ilike ${alvo} or ${chip.numero} ilike ${alvo} or ${account.chipId} ilike ${alvo})`,
+    )
+  }
+
   return db
     .select(CAMPOS_DA_CONTA)
     .from(account)
     .innerJoin(chip, eq(chip.id, account.chipId))
-    .where(and(eq(account.status, "ativa"), sql`${account.id} not in ${abertos}`))
+    .where(and(...condicoes))
     .orderBy(asc(account.deviceId), asc(account.slot))
 }
 
@@ -64,7 +74,7 @@ export async function contasComIncidenteAberto(): Promise<ContaComIncidente[]> {
     .innerJoin(account, eq(account.id, incident.accountId))
     .innerJoin(chip, eq(chip.id, account.chipId))
     .where(isNull(incident.fim))
-    .orderBy(desc(incident.inicio))
+    .orderBy(asc(incident.inicio))
 }
 
 /**
