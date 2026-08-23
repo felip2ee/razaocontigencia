@@ -52,7 +52,7 @@
 
 ---
 
-## Task 1: Paleta, logos e fim do tema escuro
+## Task 1: Paleta, logos e fim do tema escuro — CONCLUÍDA (commit 68171d1, review limpa)
 
 **Files:**
 - Modify: `app/globals.css`
@@ -65,7 +65,7 @@
 - Consumes: nada.
 - Produces: os tokens que todas as tarefas seguintes usam — `--primary` (azul da marca), `--background`, `--card`, `--muted`, `--border`, os sete `--sidebar-*`, e três tokens de status: `--status-ok`, `--status-restricao`, `--status-ban`, expostos no `@theme inline` como `--color-status-ok`, `--color-status-restricao`, `--color-status-ban`.
 
-- [ ] **Step 1: Copiar as logos para `public/`**
+- [x] **Step 1: Copiar as logos para `public/`**
 
 Os arquivos estão em `logos novadigital/` na raiz do repositório. Copie com nomes limpos:
 
@@ -84,7 +84,7 @@ A pasta original fica onde está, mas não entra no git — são os arquivos cru
 /logos novadigital/
 ```
 
-- [ ] **Step 2: Acrescentar os tokens de status ao `@theme inline`**
+- [x] **Step 2: Acrescentar os tokens de status ao `@theme inline`**
 
 Em `app/globals.css`, dentro do bloco `@theme inline` já existente, acrescentar três linhas junto às outras `--color-*`:
 
@@ -94,7 +94,7 @@ Em `app/globals.css`, dentro do bloco `@theme inline` já existente, acrescentar
     --color-status-ban: var(--status-ban);
 ```
 
-- [ ] **Step 3: Substituir o bloco `:root`**
+- [x] **Step 3: Substituir o bloco `:root`**
 
 Trocar o bloco `:root` inteiro por:
 
@@ -143,11 +143,11 @@ Trocar o bloco `:root` inteiro por:
 }
 ```
 
-- [ ] **Step 4: Remover o tema escuro do CSS**
+- [x] **Step 4: Remover o tema escuro do CSS**
 
 Apagar o bloco `.dark { ... }` inteiro e a linha `@custom-variant dark (&:is(.dark *));` do topo do arquivo.
 
-- [ ] **Step 5: Remover o provider de tema**
+- [x] **Step 5: Remover o provider de tema**
 
 Apagar `components/theme-provider.tsx`. Em `app/layout.tsx`, remover o import do `ThemeProvider` e desembrulhar o conteúdo do `<body>`, deixando-o assim por ora (o shell completo vem na Task 2):
 
@@ -169,7 +169,7 @@ Apagar `components/theme-provider.tsx`. Em `app/layout.tsx`, remover o import do
 
 Remover também `suppressHydrationWarning` do `<html>`: ele existia por causa do `next-themes`.
 
-- [ ] **Step 6: Remover a dependência**
+- [x] **Step 6: Remover a dependência**
 
 ```bash
 npm uninstall next-themes
@@ -177,7 +177,7 @@ npm uninstall next-themes
 
 Conferir que `hooks/` não contém nada que dependa de tema; se contiver, apagar o arquivo correspondente.
 
-- [ ] **Step 7: Verificar**
+- [x] **Step 7: Verificar**
 
 Run: `npx tsc --noEmit`
 Expected: sem erro.
@@ -194,7 +194,7 @@ Expected: nenhum resultado.
 Subir a aplicação com `mcp__Claude_Browser__preview_start` e abrir `/`.
 Expected: a página carrega sem erro de console. O visual ainda é o antigo — só a paleta mudou; botões primários agora são azuis em vez de pretos.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/globals.css app/layout.tsx public .gitignore package.json package-lock.json
