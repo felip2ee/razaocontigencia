@@ -34,3 +34,6 @@ pnpm-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# originais das logos; a aplicação usa as cópias em public/
+/logos novadigital/
