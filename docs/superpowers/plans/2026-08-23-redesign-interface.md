@@ -1076,7 +1076,7 @@ git commit -m "feat: aquecimento com progresso por aparelho"
 
 ---
 
-## Task 5: Ficha do aparelho
+## Task 5: Ficha do aparelho — CONCLUÍDA (commit 1fd7e35, review limpa)
 
 **Files:**
 - Modify: `app/aparelho/[id]/page.tsx`
@@ -1084,7 +1084,7 @@ git commit -m "feat: aquecimento com progresso por aparelho"
 **Interfaces:**
 - Consumes: `PageHeader`, `StatusBadge`, `EmptyState`; `fichaDoAparelho`, `RegistrarIncidente`, `EncerrarIncidente`, `mudarStatusDoAparelho`, `idadeEmDias` — todos inalterados.
 
-- [ ] **Step 1: Reescrever a tela**
+- [x] **Step 1: Reescrever a tela**
 
 A tela mantém exatamente a mesma informação e as mesmas ações da versão atual. Muda a forma: os três slots deixam de ser linhas de tabela e viram três cards lado a lado.
 
@@ -1102,7 +1102,7 @@ Estrutura nova, de cima para baixo:
 
 Use as mesmas funções auxiliares que já existem no arquivo (`duracao`, `NOME_DO_SLOT`) sem reescrevê-las.
 
-- [ ] **Step 2: Verificar**
+- [x] **Step 2: Verificar**
 
 Run: `npx tsc --noEmit`, `npm run lint`, `npm run build`
 Expected: sem erro; `/aparelho/[id]` como `ƒ`.
@@ -1115,7 +1115,7 @@ No browser, em `/aparelho/AP001`:
 
 Estreitar para 900px e confirmar que os três cards empilham sem rolagem horizontal.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add "app/aparelho/[id]/page.tsx"
