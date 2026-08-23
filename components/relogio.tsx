@@ -42,7 +42,7 @@ export function Relogio() {
       <div className="font-mono text-2xl leading-none font-medium">
         {agora ? HORA.format(agora) : "--:--:--"}
       </div>
-      <div className="text-muted-foreground mt-1 text-xs capitalize">
+      <div className="text-muted-foreground mt-1 text-xs first-letter:uppercase">
         {agora ? DATA.format(agora) : " "}
       </div>
     </div>

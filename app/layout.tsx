@@ -32,9 +32,11 @@ export default function RootLayout({
         <div className="flex min-h-svh">
           <AppSidebar />
           <div className="flex min-w-0 flex-1 flex-col">
-            <header className="bg-card border-border flex items-center justify-end gap-6 border-b px-6 py-3">
-              <Busca />
-              <Relogio />
+            <header className="bg-card border-border border-b">
+              <div className="mx-auto flex w-full max-w-[1400px] items-center justify-end gap-6 px-6 py-3">
+                <Busca />
+                <Relogio />
+              </div>
             </header>
             <main className="mx-auto w-full max-w-[1400px] flex-1 p-6">{children}</main>
           </div>

@@ -89,7 +89,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         </div>
       </div>
 
-      {/* lg e não md: a sidebar fixa de 248px come a largura, então em 900px
+      {/* lg e não md: a sidebar fixa de 224px come a largura, então em 900px
           de viewport o conteúdo só tem ~650px e três colunas ficariam apertadas. */}
       <div className="grid gap-3 lg:grid-cols-3">
         {SLOTS.map((slot) => {

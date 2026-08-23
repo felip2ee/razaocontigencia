@@ -46,7 +46,14 @@ export default async function Page() {
             </div>
             <div className="text-muted-foreground text-sm tabular-nums">{percentual}%</div>
           </div>
-          <div className="bg-muted mt-2 h-2 overflow-hidden rounded-full">
+          <div
+            role="progressbar"
+            aria-valuenow={feitas}
+            aria-valuemin={0}
+            aria-valuemax={total}
+            aria-label="Tarefas feitas hoje"
+            className="bg-muted mt-2 h-2 overflow-hidden rounded-full"
+          >
             <div
               className="bg-primary h-full rounded-full transition-[width]"
               style={{ width: `${percentual}%` }}
@@ -85,7 +92,14 @@ export default async function Page() {
               <span className="text-muted-foreground text-sm tabular-nums">
                 {feitasNoAparelho}/{lista.length}
               </span>
-              <div className="bg-muted ml-auto h-1.5 w-24 overflow-hidden rounded-full">
+              <div
+                role="progressbar"
+                aria-valuenow={feitasNoAparelho}
+                aria-valuemin={0}
+                aria-valuemax={lista.length}
+                aria-label={`Tarefas feitas no aparelho ${deviceId}`}
+                className="bg-muted ml-auto h-1.5 w-24 overflow-hidden rounded-full"
+              >
                 <div
                   className={concluido ? "bg-status-ok h-full" : "bg-primary h-full"}
                   style={{ width: `${(feitasNoAparelho / lista.length) * 100}%` }}

@@ -47,7 +47,9 @@ export async function contasSaudaveis(filtro?: string): Promise<ContaNaLista[]> 
   const condicoes = [eq(account.status, "ativa"), sql`${account.id} not in ${abertos}`]
 
   if (termo) {
-    const alvo = `%${termo}%`
+    // `%` e `_` são curingas do LIKE: sem escapar, digitar `%` lista tudo em
+    // vez de procurar por `%`. A barra invertida é o escape padrão do Postgres.
+    const alvo = `%${termo.replace(/[\\%_]/g, (c) => "\\" + c)}%`
     condicoes.push(
       sql`(${account.deviceId} ilike ${alvo} or ${chip.numero} ilike ${alvo} or ${account.chipId} ilike ${alvo})`,
     )
