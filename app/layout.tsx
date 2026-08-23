@@ -1,16 +1,22 @@
 import { Geist_Mono, Inter } from "next/font/google"
-import Link from "next/link"
 
 import "./globals.css"
+import { AppSidebar } from "@/components/app-sidebar"
 import { Busca } from "@/components/busca"
-import { cn } from "@/lib/utils";
+import { Relogio } from "@/components/relogio"
+import { cn } from "@/lib/utils"
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'})
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 const fontMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 })
+
+export const metadata = {
+  title: "Contingência — Nova Digital",
+  icons: { icon: "/nova-digital-icone.png" },
+}
 
 export default function RootLayout({
   children,
@@ -23,17 +29,16 @@ export default function RootLayout({
       className={cn("antialiased", fontMono.variable, "font-sans", inter.variable)}
     >
       <body>
-        <header className="flex items-center gap-6 border-b px-6 py-3 text-sm">
-          <Link href="/" className="font-medium">
-            Contingência
-          </Link>
-          <nav className="flex gap-4">
-            <Link href="/aquecimento">Aquecimento</Link>
-            <Link href="/cadastro">Cadastro</Link>
-          </nav>
-          <Busca />
-        </header>
-        <main>{children}</main>
+        <div className="flex min-h-svh">
+          <AppSidebar />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <header className="bg-card border-border flex items-center justify-end gap-6 border-b px-6 py-3">
+              <Busca />
+              <Relogio />
+            </header>
+            <main className="mx-auto w-full max-w-[1400px] flex-1 p-6">{children}</main>
+          </div>
+        </div>
       </body>
     </html>
   )
