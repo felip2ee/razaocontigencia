@@ -204,7 +204,7 @@ git commit -m "feat: paleta Nova Digital e remocao do tema escuro"
 
 ---
 
-## Task 2: Shell — sidebar, header e relógio
+## Task 2: Shell — sidebar, header e relógio — CONCLUÍDA (commit 67a9151, review limpa)
 
 **Files:**
 - Create: `components/app-sidebar.tsx`, `components/relogio.tsx`, `components/page-header.tsx`
@@ -217,9 +217,16 @@ git commit -m "feat: paleta Nova Digital e remocao do tema escuro"
   - `Relogio()` — sem props
   - `PageHeader({ titulo, subtitulo, acoes }: { titulo: string; subtitulo: string; acoes?: React.ReactNode })` — usado por todas as cinco páginas nas tarefas seguintes
 
-- [ ] **Step 1: Escrever o relógio**
+- [x] **Step 1: Escrever o relógio**
 
-Criar `components/relogio.tsx`:
+Criar `components/relogio.tsx`.
+
+> **Correção aplicada na implementação:** o código abaixo, como escrito, faz `npm run lint`
+> falhar pela regra `react-hooks/set-state-in-effect` — ele chama `setAgora` de forma
+> síncrona dentro do `useEffect`. A implementação final usa `useSyncExternalStore`, com a
+> mesma API pública e o mesmo comportamento visível. Consulte `components/relogio.tsx` no
+> repositório para a versão correta; o trecho abaixo fica como registro da intenção.
+
 
 ```tsx
 "use client"
@@ -263,7 +270,7 @@ export function Relogio() {
 }
 ```
 
-- [ ] **Step 2: Escrever a sidebar**
+- [x] **Step 2: Escrever a sidebar**
 
 Criar `components/app-sidebar.tsx`:
 
@@ -344,7 +351,7 @@ export function AppSidebar() {
 
 Nota sobre a restrição de Server Components: a sidebar é cliente porque `usePathname` exige. É uma exceção justificada — marcar o item ativo no servidor exigiria passar o pathname por todas as páginas. O relógio e a sidebar são os dois únicos componentes de cliente novos.
 
-- [ ] **Step 3: Escrever o cabeçalho de página**
+- [x] **Step 3: Escrever o cabeçalho de página**
 
 Criar `components/page-header.tsx`:
 
@@ -370,7 +377,7 @@ export function PageHeader({
 }
 ```
 
-- [ ] **Step 4: Adaptar a busca**
+- [x] **Step 4: Adaptar a busca**
 
 Substituir `components/busca.tsx` por:
 
@@ -394,7 +401,7 @@ export function Busca() {
 }
 ```
 
-- [ ] **Step 5: Montar o shell no layout**
+- [x] **Step 5: Montar o shell no layout**
 
 Substituir `app/layout.tsx` por:
 
@@ -448,7 +455,7 @@ export default function RootLayout({
 
 O título e o subtítulo de cada página não ficam neste header: cada página renderiza o seu `PageHeader` como primeiro elemento, porque só ela sabe o que dizer.
 
-- [ ] **Step 6: Verificar**
+- [x] **Step 6: Verificar**
 
 Run: `npx tsc --noEmit` e `npm run lint`
 Expected: sem erro.
@@ -465,7 +472,7 @@ Subir com `mcp__Claude_Browser__preview_start` e conferir, em `/`, `/aquecimento
 
 Estreitar a janela para 900px com `mcp__Claude_Browser__resize_window` e confirmar que a página não ganha rolagem horizontal.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/layout.tsx components/app-sidebar.tsx components/relogio.tsx components/page-header.tsx components/busca.tsx
