@@ -1,5 +1,10 @@
 # Redesign da interface — plano de implementação
 
+> **CONCLUÍDO.** As seis tarefas foram implementadas e revisadas, e a revisão final da branch
+> gerou uma rodada de 15 correções, todas verificadas (commits `e690146`..`818e222`). Os
+> achados que ficaram abertos de propósito estão em
+> [pendencias-conhecidas.md](../pendencias-conhecidas.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Trocar a interface crua do sistema por um visual limpo com identidade Nova Digital — sidebar escura, corpo claro em cards, relógio no header — e reorganizar a informação para que as ações do dia a dia aconteçam onde o operador já está olhando.
