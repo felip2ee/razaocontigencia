@@ -4,7 +4,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import { PageHeader } from "@/components/page-header"
-import { Badge } from "@/components/ui/badge"
+import { StatusDeCadastro } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,6 +12,7 @@ import { moverChip } from "@/lib/actions"
 import { db } from "@/lib/db"
 import { fichaDoChip } from "@/lib/queries"
 import { NOME_DO_SLOT } from "@/lib/slots"
+import { cn, LINK } from "@/lib/utils"
 import { dataBR } from "@/lib/tempo"
 import { device } from "@/lib/schema"
 
@@ -40,7 +41,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             Na bandeja do aparelho{" "}
             <Link
               href={`/aparelho/${ficha.aparelhoDaBandeja.id}`}
-              className="hover:text-primary underline underline-offset-4"
+              className={LINK}
             >
               {ficha.aparelhoDaBandeja.id}
             </Link>
@@ -113,9 +114,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             Status
           </div>
           <div className="mt-1">
-            <Badge variant={ficha.chip.status === "aposentado" ? "destructive" : "secondary"}>
-              {ficha.chip.status}
-            </Badge>
+            <StatusDeCadastro valor={ficha.chip.status} />
           </div>
         </div>
         <div>
@@ -127,7 +126,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               <span>
                 <Link
                   href={`/aparelho/${ficha.conta.deviceId}`}
-                  className="hover:text-primary font-medium"
+                  className={cn(LINK, "font-medium")}
                 >
                   {ficha.conta.deviceId}
                 </Link>{" "}
@@ -184,7 +183,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             {aparelhos.length === 0 ? (
               <p className="text-muted-foreground text-sm">
                 Nenhum aparelho ativo no cadastro, então não há bandeja para onde mover.{" "}
-                <Link href="/cadastro" className="hover:text-primary underline underline-offset-4">
+                <Link href="/cadastro" className={LINK}>
                   Cadastre um aparelho
                 </Link>{" "}
                 para liberar este destino.

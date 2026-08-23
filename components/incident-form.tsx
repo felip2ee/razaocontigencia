@@ -32,15 +32,21 @@ export function RegistrarIncidente({ accountId }: { accountId: number }) {
 export function EncerrarIncidente({
   incidentId,
   tipo,
+  conta,
 }: {
   incidentId: number
   tipo: "restricao" | "ban"
+  /** Qual conta este botão encerra, para o leitor de tela. Na ficha do
+      aparelho o contexto já está no cartão; na tabela do painel, não. */
+  conta?: string
 }) {
+  const rotulo = (acao: string) => (conta ? `${acao} — ${conta}` : undefined)
+
   if (tipo === "restricao") {
     return (
       <form action={encerrarIncidente}>
         <input type="hidden" name="incidentId" value={incidentId} />
-        <Button type="submit" size="sm">
+        <Button type="submit" size="sm" aria-label={rotulo("Voltou")}>
           Voltou
         </Button>
       </form>
@@ -52,14 +58,19 @@ export function EncerrarIncidente({
       <form action={resolverBan}>
         <input type="hidden" name="incidentId" value={incidentId} />
         <input type="hidden" name="resultado" value="recuperada" />
-        <Button type="submit" size="sm">
+        <Button type="submit" size="sm" aria-label={rotulo("Análise devolveu")}>
           Análise devolveu
         </Button>
       </form>
       <form action={resolverBan}>
         <input type="hidden" name="incidentId" value={incidentId} />
         <input type="hidden" name="resultado" value="perdida" />
-        <Button type="submit" size="sm" variant="destructive">
+        <Button
+          type="submit"
+          size="sm"
+          variant="destructive"
+          aria-label={rotulo("Perdido")}
+        >
           Perdido
         </Button>
       </form>

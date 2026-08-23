@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { contadores, contasComIncidenteAberto, contasSaudaveis } from "@/lib/queries"
+import { cn, LINK } from "@/lib/utils"
 import { NOME_DO_SLOT } from "@/lib/slots"
 import { tempoDecorrido } from "@/lib/tempo"
 
@@ -113,7 +114,7 @@ export default async function Page({
                     <TableCell>
                       <Link
                         href={`/aparelho/${c.deviceId}`}
-                        className="hover:text-primary font-medium"
+                        className={cn(LINK, "font-medium")}
                       >
                         {c.deviceId}
                       </Link>
@@ -131,7 +132,11 @@ export default async function Page({
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end">
-                        <EncerrarIncidente incidentId={c.incidentId} tipo={c.tipo} />
+                        <EncerrarIncidente
+                          incidentId={c.incidentId}
+                          tipo={c.tipo}
+                          conta={`${c.deviceId}, ${NOME_DO_SLOT[c.slot]}`}
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -189,7 +194,7 @@ export default async function Page({
                     <TableCell>
                       <Link
                         href={`/aparelho/${c.deviceId}`}
-                        className="hover:text-primary font-medium"
+                        className={cn(LINK, "font-medium")}
                       >
                         {c.deviceId}
                       </Link>
@@ -200,7 +205,7 @@ export default async function Page({
                     <TableCell className="tabular-nums">{c.numero}</TableCell>
                     <TableCell className="text-muted-foreground">{c.operadora}</TableCell>
                     <TableCell>
-                      <Link href={`/chip/${c.chipId}`} className="hover:text-primary">
+                      <Link href={`/chip/${c.chipId}`} className={LINK}>
                         {c.chipId}
                       </Link>
                     </TableCell>

@@ -5,7 +5,7 @@ import { notFound } from "next/navigation"
 import { EmptyState } from "@/components/empty-state"
 import { EncerrarIncidente, RegistrarIncidente } from "@/components/incident-form"
 import { PageHeader } from "@/components/page-header"
-import { StatusBadge } from "@/components/status-badge"
+import { StatusBadge, StatusDeCadastro } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -18,6 +18,7 @@ import {
 import { mudarStatusDoAparelho } from "@/lib/actions"
 import { fichaDoAparelho } from "@/lib/queries"
 import { NOME_DO_SLOT, SLOTS } from "@/lib/slots"
+import { cn, LINK } from "@/lib/utils"
 import { tempoDecorrido } from "@/lib/tempo"
 import { idadeEmDias } from "@/lib/warmup"
 
@@ -60,7 +61,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           <div className="text-muted-foreground text-xs tracking-wide uppercase">
             Status
           </div>
-          <div className="mt-0.5 font-medium">{ficha.device.status}</div>
+          <div className="mt-0.5">
+            <StatusDeCadastro valor={ficha.device.status} />
+          </div>
         </div>
         <div>
           <div className="text-muted-foreground text-xs tracking-wide uppercase">
@@ -76,7 +79,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             {ficha.chipNaBandeja ? (
               <Link
                 href={`/chip/${ficha.chipNaBandeja.id}`}
-                className="hover:text-primary font-medium"
+                className={cn(LINK, "font-medium")}
               >
                 {ficha.chipNaBandeja.id} —{" "}
                 <span className="tabular-nums">{ficha.chipNaBandeja.numero}</span> (
@@ -107,7 +110,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                   {NOME_DO_SLOT[slot]}
                 </div>
                 <div className="text-muted-foreground">Slot livre</div>
-                <Link href="/cadastro" className="hover:text-primary mt-auto text-sm">
+                <Link href="/cadastro" className={cn(LINK, "mt-auto text-sm")}>
                   Ativar conta aqui
                 </Link>
               </div>
@@ -124,7 +127,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               </div>
               <div className="text-lg font-medium tabular-nums">{c.numero}</div>
               <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 text-sm">
-                <Link href={`/chip/${c.chipId}`} className="hover:text-primary">
+                <Link href={`/chip/${c.chipId}`} className={LINK}>
                   {c.chipId}
                 </Link>
                 <span className="tabular-nums">
