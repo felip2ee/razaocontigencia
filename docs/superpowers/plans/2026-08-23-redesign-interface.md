@@ -1124,7 +1124,7 @@ git commit -m "feat: ficha do aparelho com os tres slots em cards"
 
 ---
 
-## Task 6: Ficha do chip e cadastro
+## Task 6: Ficha do chip e cadastro — CONCLUÍDA (commit ba338ef, review limpa)
 
 Duas telas pequenas, uma tarefa só: as mudanças são do mesmo tipo e o revisor as julgaria em conjunto.
 
@@ -1134,7 +1134,7 @@ Duas telas pequenas, uma tarefa só: as mudanças são do mesmo tipo e o revisor
 **Interfaces:**
 - Consumes: `PageHeader`, `EmptyState`; `fichaDoChip`, `moverChip`, `criarAparelho`, `criarChip`, `ativarConta`, `chipsLivres` — todos inalterados.
 
-- [ ] **Step 1: Reescrever a ficha do chip**
+- [x] **Step 1: Reescrever a ficha do chip**
 
 Leia o arquivo atual antes. A informação e o formulário de mover continuam idênticos — inclusive os três destinos e a recusa de bandeja sem aparelho. Muda a hierarquia:
 
@@ -1145,7 +1145,7 @@ Leia o arquivo atual antes. A informação e o formulário de mover continuam id
 
 Preserve o tratamento do caso em que `local` é `bandeja` mas o aparelho não é encontrado. Hoje ele cai no ramo final e exibe "Na pasta", o que é um defeito registrado em `docs/superpowers/pendencias-conhecidas.md`. **Corrija-o nesta tarefa**, já que a seção está sendo reescrita de qualquer forma: um terceiro ramo explícito dizendo que o chip está na bandeja de um aparelho que não existe mais.
 
-- [ ] **Step 2: Reescrever o cadastro**
+- [x] **Step 2: Reescrever o cadastro**
 
 Leia o arquivo atual antes. Os três formulários continuam com os mesmos campos, os mesmos `name`, as mesmas actions e o mesmo `FormAcao`. Muda o invólucro: cada formulário passa a viver em seu próprio card `bg-card border-border rounded-xl border p-5`, num grid de três colunas em tela larga (`grid gap-4 lg:grid-cols-3`), empilhando em telas menores. Cada card ganha um título e uma linha de subtítulo dizendo quando usar aquele formulário.
 
@@ -1153,7 +1153,7 @@ Acrescente um `PageHeader` no topo com título "Cadastro" e subtítulo explicand
 
 Não mexa em nada que envolva as constraints nem as mensagens de erro: `FormAcao` já cuida disso e foi verificado.
 
-- [ ] **Step 3: Verificar**
+- [x] **Step 3: Verificar**
 
 Run: `npx tsc --noEmit`, `npm run lint`, `npm run build`
 Expected: sem erro; `/chip/[id]` e `/cadastro` como `ƒ`.
@@ -1166,7 +1166,7 @@ No browser:
 - em `/cadastro`, cadastrar um aparelho com ID inédito e confirmar que aparece nos selects;
 - tentar cadastrar de novo com o **mesmo** ID e confirmar que a mensagem de constraint em português aparece e os valores digitados permanecem no formulário.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add "app/chip/[id]/page.tsx" app/cadastro/page.tsx
