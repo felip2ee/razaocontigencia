@@ -481,7 +481,7 @@ git commit -m "feat: shell com sidebar Nova Digital, header e relogio"
 
 ---
 
-## Task 3: Painel
+## Task 3: Painel — CONCLUÍDA (commit 8453436, review limpa)
 
 A tarefa de maior efeito: as ações de incidente passam a acontecer no painel.
 
@@ -497,7 +497,7 @@ A tarefa de maior efeito: as ações de incidente passam a acontecer no painel.
   - `EmptyState({ Icone, titulo, descricao }: { Icone: LucideIcon; titulo: string; descricao: string })`
   - `contasSaudaveis(filtro?: string)` em `lib/queries.ts` — parâmetro novo, opcional, sem quebrar as chamadas existentes
 
-- [ ] **Step 1: Escrever os três componentes**
+- [x] **Step 1: Escrever os três componentes**
 
 Criar `components/stat-card.tsx`:
 
@@ -582,7 +582,7 @@ export function EmptyState({
 }
 ```
 
-- [ ] **Step 2: Ordenar os incidentes do mais antigo e aceitar filtro**
+- [x] **Step 2: Ordenar os incidentes do mais antigo e aceitar filtro**
 
 Em `lib/queries.ts`, duas mudanças cirúrgicas.
 
@@ -618,7 +618,7 @@ export async function contasSaudaveis(filtro?: string): Promise<ContaNaLista[]> 
 
 `ilike` é do PostgreSQL e resolve maiúsculas e minúsculas de graça. As chamadas existentes de `contasSaudaveis()` sem argumento continuam funcionando sem alteração.
 
-- [ ] **Step 3: Reescrever o painel**
+- [x] **Step 3: Reescrever o painel**
 
 Substituir `app/page.tsx` por:
 
@@ -855,7 +855,7 @@ export default async function Page({
 
 O formulário do filtro não tem botão: `Enter` no campo envia, e como o `action` está ausente ele recarrega a própria rota com `?filtro=`. O parâmetro `nao-encontrado` some ao filtrar, que é o comportamento certo — o aviso não deve sobreviver à próxima interação.
 
-- [ ] **Step 4: Verificar**
+- [x] **Step 4: Verificar**
 
 Run: `npx tsc --noEmit`, `npm run lint`, `npm run build`
 Expected: sem erro; `/` como `ƒ`.
@@ -868,7 +868,7 @@ No browser, com os dados reais do banco:
 - filtre por um ID de aparelho existente e confirme que a tabela reduz; filtre por algo inexistente e confirme o estado vazio com o texto do filtro;
 - filtre por um trecho de número em minúsculas e confirme que `ilike` encontra assim mesmo.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add components/stat-card.tsx components/status-badge.tsx components/empty-state.tsx lib/queries.ts app/page.tsx
