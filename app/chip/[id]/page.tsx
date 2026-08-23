@@ -167,7 +167,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             >
               <option value="pasta">Pasta (fazenda de SMS)</option>
               <option value="gaveta">Gaveta</option>
-              <option value="bandeja">Bandeja de um aparelho</option>
+              {/* Sem aparelho ativo não há bandeja possível: oferecer o destino
+                  levaria a uma recusa da action, que estoura a tela inteira. */}
+              {aparelhos.length > 0 && (
+                <option value="bandeja">Bandeja de um aparelho</option>
+              )}
             </select>
           </div>
           <div className="grid gap-1.5">
@@ -181,19 +185,28 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="mv-device">Aparelho da bandeja</Label>
-            <select
-              id="mv-device"
-              name="bandejaDeviceId"
-              defaultValue={ficha.chip.bandejaDeviceId ?? ""}
-              className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-            >
-              <option value="">—</option>
-              {aparelhos.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.id} {a.apelido ? `— ${a.apelido}` : ""}
-                </option>
-              ))}
-            </select>
+            {aparelhos.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                Nenhum aparelho ativo no cadastro, então não há bandeja para onde mover.{" "}
+                <Link href="/cadastro" className="hover:text-primary underline underline-offset-4">
+                  Cadastre um aparelho
+                </Link>{" "}
+                para liberar este destino.
+              </p>
+            ) : (
+              <select
+                id="mv-device"
+                name="bandejaDeviceId"
+                defaultValue={ficha.chip.bandejaDeviceId ?? undefined}
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              >
+                {aparelhos.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.id} {a.apelido ? `— ${a.apelido}` : ""}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <Button type="submit" className="self-start">
             Mover chip
