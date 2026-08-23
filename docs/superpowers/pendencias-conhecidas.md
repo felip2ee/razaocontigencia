@@ -52,10 +52,38 @@ há pendência aqui — o registro fica porque a proteção é sutil e alguém p
 perceber o que ela guarda: a cota diária por faixa, que é a regra pela qual o sistema
 existe.
 
+## Interface
+
+**`moverChip` recusa sem mensagem inline.** Quando o destino é bandeja e nenhum aparelho é
+escolhido, `moverChip` lança e a recusa sobe para `app/error.tsx`, virando tela de erro
+inteira em vez de um aviso ao lado do formulário. O caminho que levava a isso ficou
+inalcançável pelo formulário — o select não nasce mais vazio —, então hoje é backstop, não
+o que o operador encontra. Fechar de vez exige migrar `moverChip` para o formato
+`EstadoDoForm`, como as ações de cadastro já usam.
+
+**Chip na bandeja de aparelho não ativo.** No formulário de mover da ficha do chip, a lista
+de aparelhos só traz os `ativo`. Se um chip estiver na bandeja de um aparelho que depois foi
+para quarentena ou aposentadoria, a opção "Bandeja de um aparelho" some do select e o destino
+cai para "Pasta" sem avisar. Combinação rara e anterior ao redesign.
+
+**O título da página não fica no header.** O spec do redesign pedia título e subtítulo à
+esquerda da faixa branca do topo; eles ficaram no corpo, via `PageHeader`. Movê-los exigiria
+cada tela publicar o próprio título por um mecanismo global, o que é pior. O efeito é uma
+faixa com espaço ocioso à esquerda.
+
+**O shell não colapsa em tela estreita.** Abaixo de cerca de 700px a sidebar fixa de 224px
+deixa a coluna de conteúdo apertada. Não há rolagem horizontal até 768px. É ferramenta de
+mesa de trabalho, e não foi projetada para telefone.
+
+**Data do relógio com inicial maiúscula.** O spec ilustrava *sábado, 23 de agosto*; a tela
+mostra "Domingo, 23 de agosto". É `first-letter:uppercase` em `components/relogio.tsx` —
+remover a classe volta para a minúscula.
+
+**`public/nova-digital-wordmark-preto.png`** está no projeto e não é usado por nada. É a
+reserva para fundo claro, prevista no spec.
+
 ## Qualidade interna
 
-- `NOME_DO_SLOT` está copiado em quatro arquivos; `haQuantoTempo` (`app/page.tsx`) e
-  `duracao` (`app/aparelho/[id]/page.tsx`) são a mesma função em duas cópias.
 - A consulta de aparelhos ativos aparece inline em `app/cadastro/page.tsx` e
   `app/chip/[id]/page.tsx` em vez de passar por `lib/queries.ts`.
 - `fichaDoAparelho` chama `contasComIncidenteAberto()` (frota inteira) para casar no
@@ -75,8 +103,13 @@ peso 1), e o limite superior do índice em `escolherPar`.
 
 ## Banco de desenvolvimento
 
-O Postgres local carrega os registros criados nas verificações (`AP001`, `C001`-`C004`,
-aparelhos e contas de teste das várias rodadas). Limpe antes de começar a usar de verdade:
+O Postgres local carrega os registros criados nas verificações de duas rodadas de trabalho.
+Hoje há sete aparelhos, dos quais só `AP001` foi criado como exemplo coerente — os outros
+(`1`, `AP-CURL-VERIFY-5`, `AP-FIXCHECK-3`, `AP-T6-NOVO`, `AP002-FIX-CHECK`, `AP999AP999`) são
+lixo de verificação, e há chips de teste, um deles repetindo o número de `C001`. Nada disso
+foi apagado de propósito: apagar dado é decisão sua.
+
+Limpe antes de começar a usar de verdade:
 
 ```bash
 docker compose down -v && docker compose up -d && npm run db:migrate && npm run db:seed
