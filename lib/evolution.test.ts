@@ -95,6 +95,14 @@ test("buscarProxy: configurado mas conectividade falha vira inativa", async () =
   assert.equal(chamada, 2)
 })
 
+test("buscarProxy: dados de proxy malformados (URL inválida) vira inativa, não lança", async () => {
+  mockFetch({
+    "/proxy/find/5511999998888": () =>
+      Response.json({ host: "proxy inválido", port: "not-a-port", protocol: "não-http" }),
+  })
+  assert.equal(await buscarProxy("5511999998888"), "inativa")
+})
+
 test("pedirQrCode: devolve o base64 da resposta", async () => {
   mockFetch({
     "/instance/connect/5511999998888": () =>

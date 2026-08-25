@@ -63,8 +63,9 @@ async function testarProxy(proxy: {
   password?: string | null
 }): Promise<boolean> {
   const auth = proxy.username && proxy.password ? `${proxy.username}:${proxy.password}@` : ""
-  const agente = new ProxyAgent(`${proxy.protocol}://${auth}${proxy.host}:${proxy.port}`)
+  let agente: ProxyAgent | undefined
   try {
+    agente = new ProxyAgent(`${proxy.protocol}://${auth}${proxy.host}:${proxy.port}`)
     const resposta = await fetch(baseUrl(), {
       dispatcher: agente,
       signal: AbortSignal.timeout(5000),
@@ -73,7 +74,7 @@ async function testarProxy(proxy: {
   } catch {
     return false
   } finally {
-    await agente.close()
+    await agente?.close()
   }
 }
 
