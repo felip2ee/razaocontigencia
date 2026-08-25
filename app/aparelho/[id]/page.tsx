@@ -2,9 +2,11 @@ import { ShieldCheck } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { ConexaoBadge } from "@/components/conexao-badge"
 import { EmptyState } from "@/components/empty-state"
 import { EncerrarIncidente, RegistrarIncidente } from "@/components/incident-form"
 import { PageHeader } from "@/components/page-header"
+import { ReconectarDialog } from "@/components/reconectar-dialog"
 import { StatusBadge, StatusDeCadastro } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,6 +23,7 @@ import { NOME_DO_SLOT, SLOTS } from "@/lib/slots"
 import { cn, LINK } from "@/lib/utils"
 import { tempoDecorrido } from "@/lib/tempo"
 import { idadeEmDias } from "@/lib/warmup"
+import { VerificarConexao } from "@/components/verificar-conexao"
 
 export const dynamic = "force-dynamic"
 
@@ -158,6 +161,18 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                   />
                 ) : (
                   <RegistrarIncidente accountId={c.id} />
+                )}
+              </div>
+              <div className="border-border flex flex-wrap items-center justify-between gap-2 border-t pt-2">
+                <ConexaoBadge
+                  status={c.evolutionStatus}
+                  proxy={c.proxyStatus}
+                  statusVerificadoEm={c.statusVerificadoEm}
+                />
+                {c.evolutionStatus === "fechada" ? (
+                  <ReconectarDialog accountId={c.id} />
+                ) : (
+                  <VerificarConexao accountId={c.id} />
                 )}
               </div>
             </div>

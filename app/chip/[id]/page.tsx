@@ -3,7 +3,9 @@ import { Archive, FolderOpen, Smartphone, TriangleAlert } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { ConexaoBadge } from "@/components/conexao-badge"
 import { PageHeader } from "@/components/page-header"
+import { ReconectarDialog } from "@/components/reconectar-dialog"
 import { StatusDeCadastro } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +17,7 @@ import { NOME_DO_SLOT } from "@/lib/slots"
 import { cn, LINK } from "@/lib/utils"
 import { dataBR } from "@/lib/tempo"
 import { device } from "@/lib/schema"
+import { VerificarConexao } from "@/components/verificar-conexao"
 
 export const dynamic = "force-dynamic"
 
@@ -141,6 +144,25 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             )}
           </div>
         </div>
+        {ficha.conta && (
+          <div>
+            <div className="text-muted-foreground text-xs tracking-wide uppercase">
+              Conexão Evolution
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <ConexaoBadge
+                status={ficha.conta.evolutionStatus}
+                proxy={ficha.conta.proxyStatus}
+                statusVerificadoEm={ficha.conta.statusVerificadoEm}
+              />
+              {ficha.conta.evolutionStatus === "fechada" ? (
+                <ReconectarDialog accountId={ficha.conta.id} />
+              ) : (
+                <VerificarConexao accountId={ficha.conta.id} />
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="bg-card border-border rounded-xl border">
