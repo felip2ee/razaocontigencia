@@ -1,6 +1,6 @@
 "use client"
 
-import { LayoutDashboard, PlusCircle, Thermometer } from "lucide-react"
+import { CircuitBoard, LayoutDashboard, PlusCircle, Smartphone, Thermometer } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -15,6 +15,8 @@ const GRUPOS = [
   {
     rotulo: "Operação",
     itens: [
+      { href: "/aparelhos", nome: "Aparelhos", Icone: Smartphone },
+      { href: "/chips", nome: "Chips", Icone: CircuitBoard },
       { href: "/aquecimento", nome: "Aquecimento", Icone: Thermometer },
       { href: "/cadastro", nome: "Cadastro", Icone: PlusCircle },
     ],

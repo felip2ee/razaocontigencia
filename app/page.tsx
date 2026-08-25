@@ -1,4 +1,4 @@
-import { CircuitBoard, Search, ShieldAlert, ShieldCheck, Smartphone } from "lucide-react"
+import { CircuitBoard, Search, ShieldAlert, ShieldCheck, Smartphone, Wifi } from "lucide-react"
 import Link from "next/link"
 
 import { EmptyState } from "@/components/empty-state"
@@ -54,7 +54,7 @@ export default async function Page({
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
           rotulo="Aparelhos"
           valor={numeros.aparelhosAtivos}
@@ -78,6 +78,12 @@ export default async function Page({
           valor={numeros.chipsLivres}
           detalhe="disponíveis para ativar"
           Icone={CircuitBoard}
+        />
+        <StatCard
+          rotulo="Conectados na Evolution"
+          valor={numeros.conectadosNaEvolution}
+          detalhe="contas com WhatsApp aberto"
+          Icone={Wifi}
         />
       </div>
 
