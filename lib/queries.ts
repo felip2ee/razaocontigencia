@@ -13,6 +13,9 @@ export type ContaNaLista = {
   numero: string
   operadora: string
   ativadaEm: string
+  evolutionStatus: "desconhecido" | "aberta" | "conectando" | "fechada"
+  proxyStatus: "sem_conexao" | "ativa" | "inativa"
+  statusVerificadoEm: Date | null
 }
 
 export type ContaComIncidente = ContaNaLista & {
@@ -30,6 +33,9 @@ const CAMPOS_DA_CONTA = {
   numero: chip.numero,
   operadora: chip.operadora,
   ativadaEm: account.ativadaEm,
+  evolutionStatus: account.evolutionStatus,
+  proxyStatus: account.proxyStatus,
+  statusVerificadoEm: account.statusVerificadoEm,
 }
 
 export async function listarCatalogo(): Promise<AcaoCatalogo[]> {
@@ -96,11 +102,16 @@ export async function contadores() {
     .where(eq(device.status, "ativo"))
   const livres = await chipsLivres()
   const saudaveis = await contasSaudaveis()
+  const [conectados] = await db
+    .select({ n: count() })
+    .from(account)
+    .where(and(eq(account.status, "ativa"), eq(account.evolutionStatus, "aberta")))
 
   return {
     aparelhosAtivos: aparelhos.n,
     contasSaudaveis: saudaveis.length,
     chipsLivres: livres.length,
+    conectadosNaEvolution: conectados.n,
   }
 }
 
@@ -266,4 +277,105 @@ export async function tarefasDoDia(dia: string): Promise<TarefaDoDia[]> {
     .leftJoin(chipDoPar, eq(chipDoPar.id, par.chipId))
     .where(eq(warmupTask.data, dia))
     .orderBy(asc(account.deviceId), asc(account.slot), asc(warmupTask.id))
+}
+
+export type AparelhoResumo = {
+  id: string
+  apelido: string | null
+  status: "ativo" | "quarentena" | "aposentado"
+  totalBans: number
+  contas: {
+    id: number
+    slot: string
+    chipId: string
+    numero: string
+    incidenteAberto: "restricao" | "ban" | null
+    evolutionStatus: "desconhecido" | "aberta" | "conectando" | "fechada"
+    proxyStatus: "sem_conexao" | "ativa" | "inativa"
+    statusVerificadoEm: Date | null
+  }[]
+}
+
+/** Um card por aparelho, com as contas ativas nele e o total de bans no
+ * histórico — a visão que faltava entre a ficha individual e o painel geral. */
+export async function listarAparelhosComResumo(): Promise<AparelhoResumo[]> {
+  const [devices, contas, abertos, historico] = await Promise.all([
+    db.select().from(device).orderBy(asc(device.id)),
+    db
+      .select({
+        id: account.id,
+        deviceId: account.deviceId,
+        slot: account.slot,
+        chipId: account.chipId,
+        numero: chip.numero,
+        evolutionStatus: account.evolutionStatus,
+        proxyStatus: account.proxyStatus,
+        statusVerificadoEm: account.statusVerificadoEm,
+      })
+      .from(account)
+      .innerJoin(chip, eq(chip.id, account.chipId))
+      .where(eq(account.status, "ativa")),
+    contasComIncidenteAberto(),
+    db
+      .select({ deviceId: account.deviceId, tipo: incident.tipo })
+      .from(incident)
+      .innerJoin(account, eq(account.id, incident.accountId)),
+  ])
+
+  return devices.map((d) => ({
+    id: d.id,
+    apelido: d.apelido,
+    status: d.status,
+    totalBans: historico.filter((h) => h.deviceId === d.id && h.tipo === "ban").length,
+    contas: contas
+      .filter((c) => c.deviceId === d.id)
+      .map((c) => ({
+        ...c,
+        incidenteAberto: abertos.find((a) => a.id === c.id)?.tipo ?? null,
+      })),
+  }))
+}
+
+export type ChipResumo = {
+  id: string
+  numero: string
+  operadora: string
+  status: "novo" | "em_uso" | "aposentado"
+  local: "pasta" | "gaveta" | "bandeja"
+  conta: {
+    id: number
+    deviceId: string
+    slot: string
+    evolutionStatus: "desconhecido" | "aberta" | "conectando" | "fechada"
+    proxyStatus: "sem_conexao" | "ativa" | "inativa"
+    statusVerificadoEm: Date | null
+  } | null
+}
+
+/** Um card por chip, com a conta que ele gerou (se houver) e a conexão dela. */
+export async function listarChipsComResumo(): Promise<ChipResumo[]> {
+  const [chips, contas] = await Promise.all([
+    db.select().from(chip).orderBy(asc(chip.id)),
+    db
+      .select({
+        id: account.id,
+        chipId: account.chipId,
+        deviceId: account.deviceId,
+        slot: account.slot,
+        evolutionStatus: account.evolutionStatus,
+        proxyStatus: account.proxyStatus,
+        statusVerificadoEm: account.statusVerificadoEm,
+      })
+      .from(account)
+      .where(eq(account.status, "ativa")),
+  ])
+
+  return chips.map((c) => ({
+    id: c.id,
+    numero: c.numero,
+    operadora: c.operadora,
+    status: c.status,
+    local: c.local,
+    conta: contas.find((a) => a.chipId === c.id) ?? null,
+  }))
 }
