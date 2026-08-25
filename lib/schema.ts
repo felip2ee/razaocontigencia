@@ -19,6 +19,13 @@ export const incidentTipo = pgEnum("incident_tipo", ["restricao", "ban"])
 export const incidentResultado = pgEnum("incident_resultado", ["pendente", "recuperada", "perdida"])
 export const warmupCategoria = pgEnum("warmup_categoria", ["conversa", "perfil", "grupo", "midia"])
 export const warmupTaskStatus = pgEnum("warmup_task_status", ["pendente", "feito", "pulado"])
+export const evolutionStatus = pgEnum("evolution_status", [
+  "desconhecido",
+  "aberta",
+  "conectando",
+  "fechada",
+])
+export const proxyStatus = pgEnum("proxy_status", ["sem_conexao", "ativa", "inativa"])
 
 export const device = pgTable("device", {
   id: text("id").primaryKey(),
@@ -52,6 +59,9 @@ export const account = pgTable(
       .references(() => chip.id),
     ativadaEm: date("ativada_em").notNull(),
     status: accountStatus("status").notNull().default("ativa"),
+    evolutionStatus: evolutionStatus("evolution_status").notNull().default("desconhecido"),
+    proxyStatus: proxyStatus("proxy_status").notNull().default("sem_conexao"),
+    statusVerificadoEm: timestamp("status_verificado_em", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
