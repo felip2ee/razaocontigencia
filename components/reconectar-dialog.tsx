@@ -27,8 +27,12 @@ export function ReconectarDialog({ accountId }: { accountId: number }) {
 
   function jaEscaneei() {
     startTransition(async () => {
-      await verificarConexao(accountId)
-      setAberto(false)
+      try {
+        await verificarConexao(accountId)
+        setAberto(false)
+      } catch {
+        setErro("Não foi possível verificar a conexão.")
+      }
     })
   }
 

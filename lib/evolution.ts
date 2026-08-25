@@ -1,4 +1,4 @@
-import { ProxyAgent } from "undici"
+import { ProxyAgent, fetch as fetchUndici } from "undici"
 
 /** Instância na Evolution é nomeada com o número do WhatsApp, sem formatação.
  * `chip.numero` pode estar salvo com parênteses/traço/DDI — normalizar cobre
@@ -66,10 +66,10 @@ async function testarProxy(proxy: {
   let agente: ProxyAgent | undefined
   try {
     agente = new ProxyAgent(`${proxy.protocol}://${auth}${proxy.host}:${proxy.port}`)
-    const resposta = await fetch(baseUrl(), {
+    const resposta = await fetchUndici(baseUrl(), {
       dispatcher: agente,
       signal: AbortSignal.timeout(5000),
-    } as RequestInit)
+    })
     return resposta.ok
   } catch {
     return false

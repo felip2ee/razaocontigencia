@@ -39,10 +39,20 @@ export async function verificarConexao(accountId: number): Promise<void> {
   refresh()
 }
 
+const TAMANHO_LOTE = 8
+
 /** Mesma coisa, em lote — base do botão "Verificar todas" das páginas de
- * lista. Um único `refresh()` no final, não um por conta. */
+ * lista. Um único `refresh()` no final, não um por conta.
+ *
+ * Roda em lotes de `TAMANHO_LOTE` (em vez de disparar tudo de uma vez) pra não
+ * afogar a Evolution self-hosted com N contas x (2 chamadas + teste de proxy
+ * de até 5s) simultâneas. Falha de uma conta não derruba as outras nem trava
+ * o refresh — `allSettled` sempre deixa o refresh rodar no final. */
 export async function verificarConexoes(accountIds: number[]): Promise<void> {
-  await Promise.all(accountIds.map((id) => verificarSemRefresh(id)))
+  for (let i = 0; i < accountIds.length; i += TAMANHO_LOTE) {
+    const lote = accountIds.slice(i, i + TAMANHO_LOTE)
+    await Promise.allSettled(lote.map((id) => verificarSemRefresh(id)))
+  }
   refresh()
 }
 
