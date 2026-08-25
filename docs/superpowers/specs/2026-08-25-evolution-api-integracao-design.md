@@ -6,11 +6,13 @@ Data: 2026-08-25
 
 O sistema hoje não sabe se uma conta WhatsApp (aparelho + chip + slot) está
 de fato conectada. Cada conta corresponde a uma instância na Evolution API
-self-hosted do usuário (nome da instância = `account.id`). O objetivo é
-saber, pra cada conta, se está conectada, se tem proxy ativo, e permitir
-reconectar via QR code sem sair do sistema — além de dar uma visão geral por
-aparelho e por chip que hoje não existe (só existe `/aparelho/[id]` e
-`/chip/[id]` como fichas individuais, sem lista).
+self-hosted do usuário, **nomeada com o número do WhatsApp** (`chip.numero`,
+não `account.id` — instâncias já existem hoje na Evolution, criadas por
+fora do sistema, e o sistema só lê). O objetivo é saber, pra cada conta, se
+está conectada, se tem proxy ativo, e permitir reconectar via QR code sem
+sair do sistema — além de dar uma visão geral por aparelho e por chip que
+hoje não existe (só existe `/aparelho/[id]` e `/chip/[id]` como fichas
+individuais, sem lista).
 
 Isto é o sub-projeto 1 de dois. O sub-projeto 2 (redesign visual com
 Higgsfield MCP) constrói em cima desta estrutura de dados e páginas, depois.
@@ -41,6 +43,14 @@ statusVerificadoEm: timestamp("status_verificado_em", { withTimezone: true }),
 
 Sem tabela nova, sem join extra. `statusVerificadoEm` nulo = nunca verificado.
 
+## Mapeamento conta → instância
+
+`normalizarNumero(numero: string): string` — remove tudo que não é dígito
+(`numero.replace(/\D/g, "")`). O nome da instância é
+`normalizarNumero(chip.numero)` da conta. `chip.numero` no banco pode estar
+formatado ou já só com dígitos — normalizar cobre os dois casos e sempre
+compara maçã com maçã contra o nome da instância na Evolution.
+
 ## Cliente Evolution (`lib/evolution.ts`)
 
 Funções puras contra a API, usando `EVOLUTION_API_URL` e `EVOLUTION_API_KEY`
@@ -53,9 +63,10 @@ de `.env.local`:
 - `buscarProxy(instanceName): Promise<"sem_conexao"|"ativa"|"inativa">` —
   GET `/proxy/find/{instance}`. Se não configurado → `sem_conexao`. Se
   configurado, testa conectividade real: faz uma requisição de saída
-  através do proxy (host/port/credenciais retornados) contra um endpoint
-  leve, com timeout de 5s, usando `undici.ProxyAgent`. Sucesso → `ativa`,
-  falha ou timeout → `inativa`.
+  através do proxy (host/port/credenciais retornados) contra a própria
+  `EVOLUTION_API_URL` (não um site externo — evita depender de terceiro),
+  com timeout de 5s, usando `undici.ProxyAgent`. Sucesso → `ativa`, falha ou
+  timeout → `inativa`.
 - `pedirQrCode(instanceName): Promise<string>` — POST `/instance/connect/{instance}`,
   retorna o base64 do QR code.
 
@@ -63,12 +74,15 @@ Nova dependência: `undici` (para `ProxyAgent`).
 
 ## Server actions (`lib/evolution-actions.ts`)
 
-- `verificarConexao(accountId: number)` — chama `buscarStatusConexao` e
-  `buscarProxy` em paralelo, grava as 3 colunas em `account`,
-  `revalidatePath` nas páginas afetadas (`/`, `/aparelhos`, `/chips`,
-  `/aparelho/[id]`, `/chip/[id]`).
-- `gerarQrCode(accountId: number)` — resolve o `deviceId` da conta, chama
-  `pedirQrCode`, retorna o base64. Não grava nada no banco (é só exibição
+- `verificarConexao(accountId: number)` — resolve `chip.numero` da conta
+  (join `account`→`chip`), normaliza, chama `buscarStatusConexao` e
+  `buscarProxy` em paralelo pro nome de instância resultante, grava as 3
+  colunas em `account`, `refresh()`.
+- `verificarConexoes(accountIds: number[])` — roda `verificarConexao` para
+  cada ID em paralelo (`Promise.all`), um único `refresh()` no final. Base
+  do botão "Verificar todas".
+- `gerarQrCode(accountId: number)` — resolve `chip.numero` da conta,
+  normaliza, chama `pedirQrCode`. Não grava nada no banco (é só exibição
   pro usuário escanear).
 
 ## Queries (`lib/queries.ts`)
@@ -88,22 +102,30 @@ Nova dependência: `undici` (para `ProxyAgent`).
 "Saudáveis" não muda (fica enxuta; conexão detalhada mora nas páginas
 novas).
 
-**`/aparelhos` (lista, nova)** — um card ou linha por aparelho: apelido/ID,
-`StatusBadge` de ciclo de vida (ativo/quarentena/aposentado), chips/números
-ativos nele, badge de restrição/ban se houver incidente aberto, contador de
-bans totais, e por conta: badge de conexão Evolution (combina
-evolutionStatus + proxyStatus) com botão "Verificar".
+**`/aparelhos` (lista, nova)** — botão "Verificar todas" no cabeçalho
+(chama `verificarConexoes` com os IDs de todas as contas ativas listadas).
+Um card ou linha por aparelho: apelido/ID, `StatusBadge` de ciclo de vida
+(ativo/quarentena/aposentado), chips/números ativos nele, badge de
+restrição/ban se houver incidente aberto, contador de bans totais, e por
+conta: badge de conexão Evolution (status + proxy + "verificado há Xmin",
+via `tempoDecorrido()` já existente em `lib/tempo.ts`) com botão
+"Verificar".
 
-**`/chips` (lista, nova)** — um card ou linha por chip: ID, número,
-operadora, `StatusBadge` de ciclo (novo/em_uso/aposentado), local
-(pasta/gaveta/bandeja), conta vinculada se houver, badge de conexão
-Evolution com botão "Verificar" quando vinculado a uma conta ativa.
+**`/chips` (lista, nova)** — mesmo botão "Verificar todas" no cabeçalho. Um
+card ou linha por chip: ID, número, operadora, `StatusBadge` de ciclo
+(novo/em_uso/aposentado), local (pasta/gaveta/bandeja), conta vinculada se
+houver, badge de conexão Evolution (com "verificado há Xmin") com botão
+"Verificar" quando vinculado a uma conta ativa.
 
 **`/aparelho/[id]` e `/chip/[id]` (fichas existentes)** — painel de conexão
 por conta: status Evolution, status proxy, "verificado há Xmin". Quando
 `evolutionStatus = 'fechada'`, botão **Reconectar** abre um dialog com o QR
 code (`gerarQrCode`) e um botão "Já escaneei, verificar" que roda
 `verificarConexao` de novo.
+
+Botão "Verificar" (individual ou "todas") fica desabilitado enquanto a
+chamada está em andamento — evita clique duplo disparando chamadas
+concorrentes pra mesma conta.
 
 ## Navegação
 
