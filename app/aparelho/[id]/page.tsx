@@ -190,6 +190,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         {ficha.historico.length === 0 ? (
           <EmptyState
             Icone={ShieldCheck}
+            Ilustracao="/vazio-tudo-certo.png"
             titulo="Nenhum incidente"
             descricao="Nenhum incidente registrado neste aparelho."
           />

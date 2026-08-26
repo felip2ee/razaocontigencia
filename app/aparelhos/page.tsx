@@ -28,6 +28,7 @@ export default async function Page() {
       {aparelhos.length === 0 ? (
         <EmptyState
           Icone={Smartphone}
+          Ilustracao="/vazio-cadastro.png"
           titulo="Nenhum aparelho cadastrado"
           descricao="Cadastre um aparelho para começar."
         />

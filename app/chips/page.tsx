@@ -34,6 +34,7 @@ export default async function Page() {
       {chips.length === 0 ? (
         <EmptyState
           Icone={CircuitBoard}
+          Ilustracao="/vazio-cadastro.png"
           titulo="Nenhum chip cadastrado"
           descricao="Cadastre um chip para começar."
         />

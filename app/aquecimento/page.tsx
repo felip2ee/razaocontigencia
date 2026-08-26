@@ -66,6 +66,7 @@ export default async function Page() {
         <div className="bg-card border-border rounded-xl border">
           <EmptyState
             Icone={Flame}
+            Ilustracao="/vazio-busca.png"
             titulo="Nada sorteado para hoje"
             descricao="Clique em Gerar tarefas de hoje. Contas com restrição ou ban aberto ficam de fora."
           />

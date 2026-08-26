@@ -97,6 +97,7 @@ export default async function Page({
         {comIncidente.length === 0 ? (
           <EmptyState
             Icone={ShieldCheck}
+            Ilustracao="/vazio-tudo-certo.png"
             titulo="Nada fora do ar"
             descricao="Nenhuma conta está com restrição ou ban aberto."
           />
@@ -175,6 +176,7 @@ export default async function Page({
         {saudaveis.length === 0 ? (
           <EmptyState
             Icone={Search}
+            Ilustracao="/vazio-busca.png"
             titulo={filtro ? "Nada encontrado" : "Nenhuma conta ativa"}
             descricao={
               filtro
