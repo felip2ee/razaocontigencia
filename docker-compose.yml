@@ -1,16 +1,38 @@
 services:
   db:
     image: postgres:17-alpine
-    container_name: contingencia-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: contingencia
-    ports:
-      - "5432:5432"
     volumes:
       - contingencia-data:/var/lib/postgresql/data
+    networks:
+      - NovaNet
+
+  app:
+    image: ghcr.io/felip2ee/razaocontigencia:latest
+    build: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/contingencia
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY}
+    networks:
+      - NovaNet
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=NovaNet"
+        - "traefik.http.routers.razaocontigencia.rule=Host(`razaocontigencia.agencianovabr.com`)"
+        - "traefik.http.routers.razaocontigencia.entrypoints=websecure"
+        - "traefik.http.routers.razaocontigencia.tls.certresolver=cetencryptresolver"
+        - "traefik.http.services.razaocontigencia.loadbalancer.server.port=3000"
+
+networks:
+  NovaNet:
+    external: true
 
 volumes:
   contingencia-data:

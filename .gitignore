@@ -37,3 +37,7 @@ next-env.d.ts
 
 # originais das logos; a aplicação usa as cópias em public/
 /logos novadigital/
+
+# worktrees isolados e scratch de brainstorming (superpowers)
+/.claude/worktrees/
+/.superpowers/
