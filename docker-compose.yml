@@ -15,20 +15,29 @@ services:
     image: ghcr.io/felip2ee/razaocontigencia:latest
     build: .
     restart: unless-stopped
+
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/contingencia
       EVOLUTION_API_URL: ${EVOLUTION_API_URL}
       EVOLUTION_API_KEY: ${EVOLUTION_API_KEY}
+
     networks:
       - NovaNet
+
     deploy:
       labels:
         - "traefik.enable=true"
         - "traefik.docker.network=NovaNet"
+
         - "traefik.http.routers.razaocontigencia.rule=Host(`razaocontigencia.agencianovabr.com`)"
         - "traefik.http.routers.razaocontigencia.entrypoints=websecure"
         - "traefik.http.routers.razaocontigencia.tls.certresolver=cetencryptresolver"
+
         - "traefik.http.services.razaocontigencia.loadbalancer.server.port=3000"
+
+        - "traefik.http.routers.razaocontigencia.middlewares=razaocontigencia-auth"
+        - "traefik.http.middlewares.razaocontigencia-auth.basicauth.users=${BASIC_AUTH_USERS}"
+        - "traefik.http.middlewares.razaocontigencia-auth.basicauth.removeheader=true"
 
 networks:
   NovaNet:
