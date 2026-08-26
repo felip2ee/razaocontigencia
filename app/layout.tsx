@@ -15,7 +15,7 @@ const fontMono = Geist_Mono({
 
 export const metadata = {
   title: "Contingência — Nova Digital",
-  icons: { icon: "/nova-digital-icone.png" },
+  icons: { icon: "/nova-icone.png" },
 }
 
 export default function RootLayout({

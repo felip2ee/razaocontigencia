@@ -31,10 +31,10 @@ export function AppSidebar() {
       <div className="px-5 py-6">
         <Link href="/" aria-label="Nova Digital — ir para o painel">
           <Image
-            src="/nova-digital-wordmark.png"
+            src="/nova-wordmark-escuro.png"
             alt="Nova Digital"
-            width={1219}
-            height={253}
+            width={2752}
+            height={1536}
             priority
             className="h-6 w-auto"
           />
