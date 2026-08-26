@@ -1,4 +1,6 @@
-const PILULA = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+import { AlertTriangle, Ban, CheckCircle2, Circle, CircleDot, Clock, type LucideIcon } from "lucide-react"
+
+const PILULA = "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
 
 const ESTILO = {
   ok: "bg-status-ok/10 text-status-ok",
@@ -12,8 +14,20 @@ const TEXTO = {
   ban: "Ban",
 } as const
 
+const ICONE_SAUDE = {
+  ok: CheckCircle2,
+  restricao: AlertTriangle,
+  ban: Ban,
+} as const
+
 export function StatusBadge({ estado }: { estado: keyof typeof ESTILO }) {
-  return <span className={`${PILULA} ${ESTILO[estado]}`}>{TEXTO[estado]}</span>
+  const Icone = ICONE_SAUDE[estado]
+  return (
+    <span className={`${PILULA} ${ESTILO[estado]}`}>
+      <Icone className="size-3" />
+      {TEXTO[estado]}
+    </span>
+  )
 }
 
 /**
@@ -30,6 +44,20 @@ const CICLO: Record<string, string> = {
   em_uso: "Em uso",
 }
 
+const CICLO_ICONE: Record<string, LucideIcon> = {
+  ativo: CircleDot,
+  em_uso: CircleDot,
+  quarentena: Clock,
+  aposentado: Circle,
+  novo: Circle,
+}
+
 export function StatusDeCadastro({ valor }: { valor: string }) {
-  return <span className={`${PILULA} bg-muted text-foreground`}>{CICLO[valor] ?? valor}</span>
+  const Icone = CICLO_ICONE[valor] ?? Circle
+  return (
+    <span className={`${PILULA} bg-muted text-foreground`}>
+      <Icone className="size-3" />
+      {CICLO[valor] ?? valor}
+    </span>
+  )
 }

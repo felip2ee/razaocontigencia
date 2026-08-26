@@ -1,3 +1,5 @@
+import { HelpCircle, Loader2, Wifi, WifiOff, type LucideIcon } from "lucide-react"
+
 import { tempoDecorrido } from "@/lib/tempo"
 
 type Status = "desconhecido" | "aberta" | "conectando" | "fechada"
@@ -17,6 +19,13 @@ const STATUS_COR: Record<Status, string> = {
   fechada: "bg-status-ban/10 text-status-ban",
 }
 
+const STATUS_ICONE: Record<Status, LucideIcon> = {
+  desconhecido: HelpCircle,
+  aberta: Wifi,
+  conectando: Loader2,
+  fechada: WifiOff,
+}
+
 const PROXY_TEXTO: Record<Proxy, string> = {
   sem_conexao: "sem proxy",
   ativa: "proxy ativo",
@@ -32,11 +41,13 @@ export function ConexaoBadge({
   proxy: Proxy
   statusVerificadoEm: Date | null
 }) {
+  const Icone = STATUS_ICONE[status]
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <span
-        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COR[status]}`}
+        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COR[status]}`}
       >
+        <Icone className={`size-3 ${status === "conectando" ? "animate-spin" : ""}`} />
         {STATUS_TEXTO[status]}
       </span>
       <span className="text-muted-foreground text-xs">{PROXY_TEXTO[proxy]}</span>
