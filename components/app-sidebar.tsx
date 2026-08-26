@@ -33,8 +33,8 @@ export function AppSidebar() {
           <Image
             src="/nova-wordmark-escuro.png"
             alt="Nova Digital"
-            width={2752}
-            height={1536}
+            width={349}
+            height={96}
             priority
             className="h-6 w-auto"
           />

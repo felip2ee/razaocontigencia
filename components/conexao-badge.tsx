@@ -47,7 +47,7 @@ export function ConexaoBadge({
       <span
         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COR[status]}`}
       >
-        <Icone className={`size-3 ${status === "conectando" ? "animate-spin" : ""}`} />
+        <Icone className={`size-3 ${status === "conectando" ? "animate-spin" : ""}`} aria-hidden="true" />
         {STATUS_TEXTO[status]}
       </span>
       <span className="text-muted-foreground text-xs">{PROXY_TEXTO[proxy]}</span>

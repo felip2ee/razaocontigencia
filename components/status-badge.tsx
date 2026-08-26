@@ -24,7 +24,7 @@ export function StatusBadge({ estado }: { estado: keyof typeof ESTILO }) {
   const Icone = ICONE_SAUDE[estado]
   return (
     <span className={`${PILULA} ${ESTILO[estado]}`}>
-      <Icone className="size-3" />
+      <Icone className="size-3" aria-hidden="true" />
       {TEXTO[estado]}
     </span>
   )
@@ -56,7 +56,7 @@ export function StatusDeCadastro({ valor }: { valor: string }) {
   const Icone = CICLO_ICONE[valor] ?? Circle
   return (
     <span className={`${PILULA} bg-muted text-foreground`}>
-      <Icone className="size-3" />
+      <Icone className="size-3" aria-hidden="true" />
       {CICLO[valor] ?? valor}
     </span>
   )
