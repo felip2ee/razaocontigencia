@@ -3,7 +3,9 @@ import { Archive, FolderOpen, Smartphone, TriangleAlert } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { CancelarChip, EditarChip } from "@/components/chip-form"
 import { ConexaoBadge } from "@/components/conexao-badge"
+import { OrigemBadge } from "@/components/origem-badge"
 import { PageHeader } from "@/components/page-header"
 import { ReconectarDialog } from "@/components/reconectar-dialog"
 import { StatusDeCadastro } from "@/components/status-badge"
@@ -122,6 +124,17 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         </div>
         <div>
           <div className="text-muted-foreground text-xs tracking-wide uppercase">
+            Origem
+          </div>
+          <div className="mt-1">
+            <OrigemBadge origem={ficha.chip.origem} />
+            {ficha.chip.origem === "propria" && (
+              <span className="text-muted-foreground text-sm">Própria</span>
+            )}
+          </div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs tracking-wide uppercase">
             Conta gerada
           </div>
           <div className="mt-1">
@@ -229,6 +242,14 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             Mover chip
           </Button>
         </form>
+      </section>
+
+      <section className="bg-card border-border rounded-xl border p-4">
+        <h2 className="mb-3 font-medium">Editar chip</h2>
+        <EditarChip chipId={ficha.chip.id} numero={ficha.chip.numero} operadora={ficha.chip.operadora} />
+        <div className="mt-4">
+          <CancelarChip chipId={ficha.chip.id} />
+        </div>
       </section>
     </div>
   )

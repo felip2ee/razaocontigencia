@@ -15,6 +15,13 @@
       "when": 1787696468799,
       "tag": "0001_spooky_mattie_franklin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787849173393,
+      "tag": "0002_strange_bloodstorm",
+      "breakpoints": true
     }
   ]
 }

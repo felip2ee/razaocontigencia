@@ -3,6 +3,8 @@ import Link from "next/link"
 
 import { ConexaoBadge } from "@/components/conexao-badge"
 import { EmptyState } from "@/components/empty-state"
+import { FiltroLista } from "@/components/filtro-lista"
+import { OrigemBadge } from "@/components/origem-badge"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge, StatusDeCadastro } from "@/components/status-badge"
 import { VerificarConexao } from "@/components/verificar-conexao"
@@ -13,8 +15,16 @@ import { cn, LINK } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
 
-export default async function Page() {
-  const aparelhos = await listarAparelhosComResumo()
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  const params = await searchParams
+  const status = typeof params.status === "string" && params.status !== "" ? params.status : undefined
+  const origem = typeof params.origem === "string" && params.origem !== "" ? params.origem : undefined
+
+  const aparelhos = await listarAparelhosComResumo({ status, origem })
   const todasAsContas = aparelhos.flatMap((a) => a.contas.map((c) => c.id))
 
   return (
@@ -23,6 +33,16 @@ export default async function Page() {
         titulo="Aparelhos"
         subtitulo="Panorama de cada aparelho: contas ativas, conexão e histórico de bans."
         acoes={<VerificarTodas accountIds={todasAsContas} />}
+      />
+
+      <FiltroLista
+        statusOpcoes={[
+          { valor: "ativo", rotulo: "Ativo" },
+          { valor: "quarentena", rotulo: "Quarentena" },
+          { valor: "aposentado", rotulo: "Aposentado" },
+        ]}
+        statusAtual={status}
+        origemAtual={origem}
       />
 
       {aparelhos.length === 0 ? (
@@ -48,7 +68,10 @@ export default async function Page() {
                     {a.apelido ?? "Sem apelido"}
                   </div>
                 </div>
-                <StatusDeCadastro valor={a.status} />
+                <div className="flex items-center gap-2">
+                  <StatusDeCadastro valor={a.status} />
+                  <OrigemBadge origem={a.origem} />
+                </div>
               </div>
 
               <div className="text-muted-foreground text-xs tracking-wide uppercase">
@@ -67,6 +90,7 @@ export default async function Page() {
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-medium tabular-nums">{c.numero}</span>
+                        <span className="text-muted-foreground text-xs">{c.chipId}</span>
                         <span className="text-muted-foreground text-xs">
                           {NOME_DO_SLOT[c.slot]}
                         </span>

@@ -106,12 +106,24 @@ export async function contadores() {
     .select({ n: count() })
     .from(account)
     .where(and(eq(account.status, "ativa"), eq(account.evolutionStatus, "aberta")))
+  const [externos] = await db
+    .select({ n: count() })
+    .from(account)
+    .innerJoin(device, eq(device.id, account.deviceId))
+    .innerJoin(chip, eq(chip.id, account.chipId))
+    .where(
+      and(
+        eq(account.status, "ativa"),
+        sql`(${device.origem} = 'externa' or ${chip.origem} = 'externa')`,
+      ),
+    )
 
   return {
     aparelhosAtivos: aparelhos.n,
     contasSaudaveis: saudaveis.length,
     chipsLivres: livres.length,
     conectadosNaEvolution: conectados.n,
+    whatsappsExternos: externos.n,
   }
 }
 
@@ -214,6 +226,21 @@ export async function contasParaSorteio(): Promise<ContaParaSorteio[]> {
   const saudaveis = await contasSaudaveis()
   if (saudaveis.length === 0) return []
 
+  const externos = await db
+    .select({ id: account.id })
+    .from(account)
+    .innerJoin(device, eq(device.id, account.deviceId))
+    .innerJoin(chip, eq(chip.id, account.chipId))
+    .where(
+      and(
+        eq(account.status, "ativa"),
+        sql`(${device.origem} = 'externa' or ${chip.origem} = 'externa')`,
+      ),
+    )
+  const idsExternos = new Set(externos.map((e) => e.id))
+  const elegiveis = saudaveis.filter((c) => !idsExternos.has(c.id))
+  if (elegiveis.length === 0) return []
+
   const ultimasVoltas = await db
     .select({
       accountId: incident.accountId,
@@ -225,7 +252,7 @@ export async function contasParaSorteio(): Promise<ContaParaSorteio[]> {
 
   const MS_POR_DIA = 86_400_000
 
-  return saudaveis.map((c) => {
+  return elegiveis.map((c) => {
     const volta = ultimasVoltas.find((v) => v.accountId === c.id)
     return {
       id: c.id,
@@ -283,6 +310,7 @@ export type AparelhoResumo = {
   id: string
   apelido: string | null
   status: "ativo" | "quarentena" | "aposentado"
+  origem: "propria" | "externa"
   totalBans: number
   contas: {
     id: number
@@ -298,9 +326,20 @@ export type AparelhoResumo = {
 
 /** Um card por aparelho, com as contas ativas nele e o total de bans no
  * histórico — a visão que faltava entre a ficha individual e o painel geral. */
-export async function listarAparelhosComResumo(): Promise<AparelhoResumo[]> {
+export async function listarAparelhosComResumo(filtro?: {
+  status?: string
+  origem?: string
+}): Promise<AparelhoResumo[]> {
+  const condicoesDevice = []
+  if (filtro?.status) condicoesDevice.push(eq(device.status, filtro.status as "ativo" | "quarentena" | "aposentado"))
+  if (filtro?.origem) condicoesDevice.push(eq(device.origem, filtro.origem as "propria" | "externa"))
+
   const [devices, contas, abertos, historico] = await Promise.all([
-    db.select().from(device).orderBy(asc(device.id)),
+    db
+      .select()
+      .from(device)
+      .where(condicoesDevice.length > 0 ? and(...condicoesDevice) : undefined)
+      .orderBy(asc(device.id)),
     db
       .select({
         id: account.id,
@@ -326,6 +365,7 @@ export async function listarAparelhosComResumo(): Promise<AparelhoResumo[]> {
     id: d.id,
     apelido: d.apelido,
     status: d.status,
+    origem: d.origem,
     totalBans: historico.filter((h) => h.deviceId === d.id && h.tipo === "ban").length,
     contas: contas
       .filter((c) => c.deviceId === d.id)
@@ -341,7 +381,9 @@ export type ChipResumo = {
   numero: string
   operadora: string
   status: "novo" | "em_uso" | "aposentado"
+  origem: "propria" | "externa"
   local: "pasta" | "gaveta" | "bandeja"
+  posicao: string | null
   conta: {
     id: number
     deviceId: string
@@ -353,9 +395,20 @@ export type ChipResumo = {
 }
 
 /** Um card por chip, com a conta que ele gerou (se houver) e a conexão dela. */
-export async function listarChipsComResumo(): Promise<ChipResumo[]> {
+export async function listarChipsComResumo(filtro?: {
+  status?: string
+  origem?: string
+}): Promise<ChipResumo[]> {
+  const condicoesChip = []
+  if (filtro?.status) condicoesChip.push(eq(chip.status, filtro.status as "novo" | "em_uso" | "aposentado"))
+  if (filtro?.origem) condicoesChip.push(eq(chip.origem, filtro.origem as "propria" | "externa"))
+
   const [chips, contas] = await Promise.all([
-    db.select().from(chip).orderBy(asc(chip.id)),
+    db
+      .select()
+      .from(chip)
+      .where(condicoesChip.length > 0 ? and(...condicoesChip) : undefined)
+      .orderBy(asc(chip.id)),
     db
       .select({
         id: account.id,
@@ -375,7 +428,9 @@ export async function listarChipsComResumo(): Promise<ChipResumo[]> {
     numero: c.numero,
     operadora: c.operadora,
     status: c.status,
+    origem: c.origem,
     local: c.local,
+    posicao: c.posicao,
     conta: contas.find((a) => a.chipId === c.id) ?? null,
   }))
 }

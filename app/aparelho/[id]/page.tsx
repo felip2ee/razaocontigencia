@@ -1,10 +1,13 @@
+import { asc, eq, or } from "drizzle-orm"
 import { ShieldCheck } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { CancelarConta, CorrigirAparelho, EditarAparelho } from "@/components/aparelho-form"
 import { ConexaoBadge } from "@/components/conexao-badge"
 import { EmptyState } from "@/components/empty-state"
 import { EncerrarIncidente, RegistrarIncidente } from "@/components/incident-form"
+import { OrigemBadge } from "@/components/origem-badge"
 import { PageHeader } from "@/components/page-header"
 import { ReconectarDialog } from "@/components/reconectar-dialog"
 import { StatusBadge, StatusDeCadastro } from "@/components/status-badge"
@@ -18,7 +21,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { mudarStatusDoAparelho } from "@/lib/actions"
+import { db } from "@/lib/db"
 import { fichaDoAparelho } from "@/lib/queries"
+import { device } from "@/lib/schema"
 import { NOME_DO_SLOT, SLOTS } from "@/lib/slots"
 import { cn, LINK } from "@/lib/utils"
 import { tempoDecorrido } from "@/lib/tempo"
@@ -31,6 +36,12 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const { id } = await params
   const ficha = await fichaDoAparelho(id)
   if (!ficha) notFound()
+
+  const aparelhos = await db
+    .select({ id: device.id, apelido: device.apelido })
+    .from(device)
+    .where(or(eq(device.status, "ativo"), eq(device.id, id)))
+    .orderBy(asc(device.id))
 
   const hoje = new Date()
 
@@ -76,6 +87,17 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         </div>
         <div>
           <div className="text-muted-foreground text-xs tracking-wide uppercase">
+            Origem
+          </div>
+          <div className="mt-0.5">
+            <OrigemBadge origem={ficha.device.origem} />
+            {ficha.device.origem === "propria" && (
+              <span className="text-muted-foreground text-sm">Própria</span>
+            )}
+          </div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs tracking-wide uppercase">
             Chip na bandeja
           </div>
           <div className="mt-0.5">
@@ -94,6 +116,15 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </div>
         </div>
       </div>
+
+      <section className="bg-card border-border rounded-xl border p-4">
+        <h2 className="mb-3 font-medium">Editar aparelho</h2>
+        <EditarAparelho
+          deviceId={ficha.device.id}
+          apelido={ficha.device.apelido}
+          notas={ficha.device.notas}
+        />
+      </section>
 
       {/* lg e não md: a sidebar fixa de 224px come a largura, então em 900px
           de viewport o conteúdo só tem ~650px e três colunas ficariam apertadas. */}
@@ -174,6 +205,15 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 ) : (
                   <VerificarConexao accountId={c.id} />
                 )}
+              </div>
+              <div className="border-border flex flex-wrap items-center gap-2 border-t pt-2">
+                <CorrigirAparelho
+                  accountId={c.id}
+                  aparelhos={aparelhos}
+                  slotAtual={c.slot}
+                  deviceIdAtual={c.deviceId}
+                />
+                <CancelarConta accountId={c.id} />
               </div>
             </div>
           )

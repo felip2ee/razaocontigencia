@@ -26,11 +26,14 @@ export const evolutionStatus = pgEnum("evolution_status", [
   "fechada",
 ])
 export const proxyStatus = pgEnum("proxy_status", ["sem_conexao", "ativa", "inativa"])
+export const deviceOrigem = pgEnum("device_origem", ["propria", "externa"])
+export const chipOrigem = pgEnum("chip_origem", ["propria", "externa"])
 
 export const device = pgTable("device", {
   id: text("id").primaryKey(),
   apelido: text("apelido"),
   status: deviceStatus("status").notNull().default("ativo"),
+  origem: deviceOrigem("origem").notNull().default("propria"),
   notas: text("notas"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 })
@@ -40,6 +43,7 @@ export const chip = pgTable("chip", {
   operadora: text("operadora").notNull(),
   numero: text("numero").notNull(),
   status: chipStatus("status").notNull().default("novo"),
+  origem: chipOrigem("origem").notNull().default("propria"),
   local: chipLocal("local").notNull().default("pasta"),
   posicao: text("posicao"),
   bandejaDeviceId: text("bandeja_device_id").references(() => device.id),

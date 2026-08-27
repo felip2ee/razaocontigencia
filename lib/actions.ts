@@ -35,12 +35,15 @@ function constraintDoErro(erro: unknown): string | undefined {
   return undefined
 }
 
+/** Erro pensado para o operador ler: a mensagem já está pronta em português. */
+class ErroDeValidacao extends Error {}
+
 function mensagemDoErro(erro: unknown): string {
   const constraint = constraintDoErro(erro)
   if (constraint && MENSAGEM_DA_CONSTRAINT[constraint]) {
     return MENSAGEM_DA_CONSTRAINT[constraint]
   }
-  if (erro instanceof Error && erro.message.startsWith("Campo obrigatório")) {
+  if (erro instanceof ErroDeValidacao) {
     return erro.message
   }
   return "Não foi possível salvar. Confira os dados e tente de novo."
@@ -65,7 +68,7 @@ async function comMensagem(
 function texto(formData: FormData, campo: string): string {
   const valor = formData.get(campo)
   if (typeof valor !== "string" || valor.trim() === "") {
-    throw new Error(`Campo obrigatório: ${campo}`)
+    throw new ErroDeValidacao(`Campo obrigatório: ${campo}`)
   }
   return valor.trim()
 }
@@ -84,6 +87,7 @@ export async function criarAparelho(
       id: texto(formData, "id"),
       apelido: textoOpcional(formData, "apelido"),
       notas: textoOpcional(formData, "notas"),
+      origem: texto(formData, "origem") as "propria" | "externa",
     })
     return { aviso: "Aparelho cadastrado." }
   })
@@ -99,6 +103,7 @@ export async function criarChip(
       operadora: texto(formData, "operadora"),
       numero: texto(formData, "numero"),
       posicao: textoOpcional(formData, "posicao"),
+      origem: texto(formData, "origem") as "propria" | "externa",
     })
     return { aviso: "Chip cadastrado." }
   })
@@ -282,5 +287,91 @@ export async function marcarTarefa(formData: FormData) {
     .update(warmupTask)
     .set({ status, feitoEm: new Date() })
     .where(eq(warmupTask.id, Number(texto(formData, "tarefaId"))))
+  refresh()
+}
+
+/**
+ * Corrige o aparelho/slot de uma conta já ativa, sem tocar em chipId,
+ * ativadaEm nem no histórico — o histórico é todo por accountId, que não
+ * muda. A constraint account_slot_ativo recusa se o destino já estiver
+ * ocupado; a mensagem já existe em MENSAGEM_DA_CONSTRAINT.
+ */
+export async function corrigirAparelho(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    await db
+      .update(account)
+      .set({
+        deviceId: texto(formData, "deviceId"),
+        slot: texto(formData, "slot") as "wa1" | "wa2" | "business",
+      })
+      .where(eq(account.id, Number(texto(formData, "accountId"))))
+    return { aviso: "Aparelho da conta corrigido." }
+  })
+}
+
+export async function editarChip(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    await db
+      .update(chip)
+      .set({ numero: texto(formData, "numero"), operadora: texto(formData, "operadora") })
+      .where(eq(chip.id, texto(formData, "chipId")))
+    return { aviso: "Chip atualizado." }
+  })
+}
+
+export async function editarAparelho(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    await db
+      .update(device)
+      .set({
+        apelido: textoOpcional(formData, "apelido"),
+        notas: textoOpcional(formData, "notas"),
+      })
+      .where(eq(device.id, texto(formData, "deviceId")))
+    return { aviso: "Aparelho atualizado." }
+  })
+}
+
+export async function cancelarChip(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    const chipId = texto(formData, "chipId")
+    const [contaAtiva] = await db
+      .select({ id: account.id })
+      .from(account)
+      .where(and(eq(account.chipId, chipId), eq(account.status, "ativa")))
+    if (contaAtiva) {
+      throw new ErroDeValidacao(
+        "Este chip tem uma conta ativa. Cancele a conta antes de cancelar o chip.",
+      )
+    }
+    await db.update(chip).set({ status: "aposentado" }).where(eq(chip.id, chipId))
+    return { aviso: "Chip cancelado." }
+  })
+}
+
+export async function cancelarConta(formData: FormData) {
+  const accountId = Number(texto(formData, "accountId"))
+  await db.transaction(async (tx) => {
+    const [conta] = await tx
+      .update(account)
+      .set({ status: "aposentada" })
+      .where(eq(account.id, accountId))
+      .returning({ chipId: account.chipId })
+    if (conta) {
+      await tx.update(chip).set({ status: "novo" }).where(eq(chip.id, conta.chipId))
+    }
+  })
   refresh()
 }
