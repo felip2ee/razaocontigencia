@@ -381,3 +381,11 @@ export async function cancelarConta(formData: FormData) {
   })
   refresh()
 }
+
+export async function reativarChip(formData: FormData) {
+  await db
+    .update(chip)
+    .set({ status: "novo" })
+    .where(eq(chip.id, texto(formData, "chipId")))
+  refresh()
+}
