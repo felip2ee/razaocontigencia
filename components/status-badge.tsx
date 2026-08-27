@@ -31,10 +31,10 @@ export function StatusBadge({ estado }: { estado: keyof typeof ESTILO }) {
 }
 
 /**
- * Ciclo de vida do aparelho e do chip. Mesma pílula do StatusBadge, mas em
- * neutro de propósito: cor de status é reservada para saúde da conta, e
- * "quarentena" não é irmã de "restrição". O mapa só existe para o enum não
- * vazar cru na tela.
+ * Ciclo de vida do aparelho e do chip. Mesma pílula do StatusBadge. Por
+ * padrão fica neutra de propósito — cor de status é reservada para saúde da
+ * conta, e "quarentena" não é irmã de "restrição". A prop `colorido` existe
+ * só para o painel de chips, onde a cor ajuda a achar um chip rápido.
  */
 const CICLO: Record<string, string> = {
   ativo: "Ativo",
@@ -52,10 +52,26 @@ const CICLO_ICONE: Record<string, LucideIcon> = {
   novo: Circle,
 }
 
-export function StatusDeCadastro({ valor }: { valor: string }) {
+const CICLO_COR: Record<string, string> = {
+  novo: "bg-status-ok/10 text-status-ok",
+  em_uso: "bg-status-restricao/10 text-status-restricao",
+  aposentado: "bg-muted text-muted-foreground",
+  ativo: "bg-status-ok/10 text-status-ok",
+  quarentena: "bg-status-restricao/10 text-status-restricao",
+}
+
+export function StatusDeCadastro({
+  valor,
+  colorido,
+}: {
+  valor: string
+  colorido?: boolean
+}) {
   const Icone = CICLO_ICONE[valor] ?? Circle
   return (
-    <span className={`${PILULA} bg-muted text-foreground`}>
+    <span
+      className={`${PILULA} ${colorido ? (CICLO_COR[valor] ?? "bg-muted text-foreground") : "bg-muted text-foreground"}`}
+    >
       <Icone className="size-3" aria-hidden="true" />
       {CICLO[valor] ?? valor}
     </span>
