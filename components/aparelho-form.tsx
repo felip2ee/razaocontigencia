@@ -11,16 +11,19 @@ export function CorrigirAparelho({
   accountId,
   aparelhos,
   slotAtual,
+  deviceIdAtual,
 }: {
   accountId: number
   aparelhos: { id: string; apelido: string | null }[]
   slotAtual: string
+  deviceIdAtual: string
 }) {
   return (
     <FormAcao acao={corrigirAparelho} className="flex flex-wrap items-center gap-2">
       <input type="hidden" name="accountId" value={accountId} />
       <select
         name="deviceId"
+        defaultValue={deviceIdAtual}
         className="border-input bg-background h-8 rounded-md border px-2 text-sm"
         aria-label="Aparelho correto"
       >

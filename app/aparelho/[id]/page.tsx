@@ -211,6 +211,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                   accountId={c.id}
                   aparelhos={aparelhos}
                   slotAtual={c.slot}
+                  deviceIdAtual={c.deviceId}
                 />
                 <CancelarConta accountId={c.id} />
               </div>
