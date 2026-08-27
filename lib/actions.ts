@@ -84,6 +84,7 @@ export async function criarAparelho(
       id: texto(formData, "id"),
       apelido: textoOpcional(formData, "apelido"),
       notas: textoOpcional(formData, "notas"),
+      origem: texto(formData, "origem") as "propria" | "externa",
     })
     return { aviso: "Aparelho cadastrado." }
   })
@@ -99,6 +100,7 @@ export async function criarChip(
       operadora: texto(formData, "operadora"),
       numero: texto(formData, "numero"),
       posicao: textoOpcional(formData, "posicao"),
+      origem: texto(formData, "origem") as "propria" | "externa",
     })
     return { aviso: "Chip cadastrado." }
   })
@@ -282,5 +284,72 @@ export async function marcarTarefa(formData: FormData) {
     .update(warmupTask)
     .set({ status, feitoEm: new Date() })
     .where(eq(warmupTask.id, Number(texto(formData, "tarefaId"))))
+  refresh()
+}
+
+/**
+ * Corrige o aparelho/slot de uma conta já ativa, sem tocar em chipId,
+ * ativadaEm nem no histórico — o histórico é todo por accountId, que não
+ * muda. A constraint account_slot_ativo recusa se o destino já estiver
+ * ocupado; a mensagem já existe em MENSAGEM_DA_CONSTRAINT.
+ */
+export async function corrigirAparelho(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    await db
+      .update(account)
+      .set({
+        deviceId: texto(formData, "deviceId"),
+        slot: texto(formData, "slot") as "wa1" | "wa2" | "business",
+      })
+      .where(eq(account.id, Number(texto(formData, "accountId"))))
+    return { aviso: "Aparelho da conta corrigido." }
+  })
+}
+
+export async function editarChip(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    await db
+      .update(chip)
+      .set({ numero: texto(formData, "numero"), operadora: texto(formData, "operadora") })
+      .where(eq(chip.id, texto(formData, "chipId")))
+    return { aviso: "Chip atualizado." }
+  })
+}
+
+export async function editarAparelho(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    await db
+      .update(device)
+      .set({
+        apelido: textoOpcional(formData, "apelido"),
+        notas: textoOpcional(formData, "notas"),
+      })
+      .where(eq(device.id, texto(formData, "deviceId")))
+    return { aviso: "Aparelho atualizado." }
+  })
+}
+
+export async function cancelarChip(formData: FormData) {
+  await db
+    .update(chip)
+    .set({ status: "aposentado" })
+    .where(eq(chip.id, texto(formData, "chipId")))
+  refresh()
+}
+
+export async function cancelarConta(formData: FormData) {
+  await db
+    .update(account)
+    .set({ status: "aposentada" })
+    .where(eq(account.id, Number(texto(formData, "accountId"))))
   refresh()
 }
