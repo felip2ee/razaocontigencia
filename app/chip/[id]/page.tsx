@@ -253,7 +253,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           origem={ficha.chip.origem}
         />
         <div className="mt-4">
-          {ficha.chip.status === "aposentado" ? (
+          {ficha.chip.status === "aposentado" && ficha.numeroPerdido ? (
+            <p className="text-muted-foreground text-sm">
+              Número perdido em ban — chip não pode ser reativado.
+            </p>
+          ) : ficha.chip.status === "aposentado" ? (
             <ReativarChip chipId={ficha.chip.id} />
           ) : (
             <CancelarChip chipId={ficha.chip.id} />

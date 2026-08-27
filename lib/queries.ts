@@ -190,6 +190,7 @@ export type FichaChip = {
   chip: typeof chip.$inferSelect
   aparelhoDaBandeja: typeof device.$inferSelect | null
   conta: (typeof account.$inferSelect) | null
+  numeroPerdido: boolean
 }
 
 export async function fichaDoChip(id: string): Promise<FichaChip | null> {
@@ -202,7 +203,22 @@ export async function fichaDoChip(id: string): Promise<FichaChip | null> {
 
   const [aConta] = await db.select().from(account).where(eq(account.chipId, id))
 
-  return { chip: oChip, aparelhoDaBandeja: aparelho ?? null, conta: aConta ?? null }
+  let numeroPerdido = false
+  if (aConta) {
+    const [perdido] = await db
+      .select({ id: incident.id })
+      .from(incident)
+      .where(
+        and(
+          eq(incident.accountId, aConta.id),
+          eq(incident.tipo, "ban"),
+          eq(incident.resultado, "perdida"),
+        ),
+      )
+    numeroPerdido = Boolean(perdido)
+  }
+
+  return { chip: oChip, aparelhoDaBandeja: aparelho ?? null, conta: aConta ?? null, numeroPerdido }
 }
 
 export type TarefaDoDia = {
