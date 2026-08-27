@@ -49,6 +49,18 @@ export default async function Page() {
               <Label htmlFor="ap-notas">Notas</Label>
               <Input id="ap-notas" name="notas" />
             </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="ap-origem">Origem</Label>
+              <select
+                id="ap-origem"
+                name="origem"
+                required
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              >
+                <option value="propria">Própria</option>
+                <option value="externa">Externa</option>
+              </select>
+            </div>
             <Button type="submit">Cadastrar aparelho</Button>
           </FormAcao>
         </div>
@@ -74,6 +86,18 @@ export default async function Page() {
             <div className="grid gap-1.5">
               <Label htmlFor="ch-posicao">Posição na pasta</Label>
               <Input id="ch-posicao" name="posicao" placeholder="pasta 2, folha 3" />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="ch-origem">Origem</Label>
+              <select
+                id="ch-origem"
+                name="origem"
+                required
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              >
+                <option value="propria">Própria</option>
+                <option value="externa">Externa</option>
+              </select>
             </div>
             <Button type="submit">Cadastrar chip</Button>
           </FormAcao>
