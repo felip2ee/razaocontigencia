@@ -35,12 +35,15 @@ function constraintDoErro(erro: unknown): string | undefined {
   return undefined
 }
 
+/** Erro pensado para o operador ler: a mensagem já está pronta em português. */
+class ErroDeValidacao extends Error {}
+
 function mensagemDoErro(erro: unknown): string {
   const constraint = constraintDoErro(erro)
   if (constraint && MENSAGEM_DA_CONSTRAINT[constraint]) {
     return MENSAGEM_DA_CONSTRAINT[constraint]
   }
-  if (erro instanceof Error && erro.message.startsWith("Campo obrigatório")) {
+  if (erro instanceof ErroDeValidacao) {
     return erro.message
   }
   return "Não foi possível salvar. Confira os dados e tente de novo."
@@ -65,7 +68,7 @@ async function comMensagem(
 function texto(formData: FormData, campo: string): string {
   const valor = formData.get(campo)
   if (typeof valor !== "string" || valor.trim() === "") {
-    throw new Error(`Campo obrigatório: ${campo}`)
+    throw new ErroDeValidacao(`Campo obrigatório: ${campo}`)
   }
   return valor.trim()
 }
@@ -338,18 +341,37 @@ export async function editarAparelho(
   })
 }
 
-export async function cancelarChip(formData: FormData) {
-  await db
-    .update(chip)
-    .set({ status: "aposentado" })
-    .where(eq(chip.id, texto(formData, "chipId")))
-  refresh()
+export async function cancelarChip(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    const chipId = texto(formData, "chipId")
+    const [contaAtiva] = await db
+      .select({ id: account.id })
+      .from(account)
+      .where(and(eq(account.chipId, chipId), eq(account.status, "ativa")))
+    if (contaAtiva) {
+      throw new ErroDeValidacao(
+        "Este chip tem uma conta ativa. Cancele a conta antes de cancelar o chip.",
+      )
+    }
+    await db.update(chip).set({ status: "aposentado" }).where(eq(chip.id, chipId))
+    return { aviso: "Chip cancelado." }
+  })
 }
 
 export async function cancelarConta(formData: FormData) {
-  await db
-    .update(account)
-    .set({ status: "aposentada" })
-    .where(eq(account.id, Number(texto(formData, "accountId"))))
+  const accountId = Number(texto(formData, "accountId"))
+  await db.transaction(async (tx) => {
+    const [conta] = await tx
+      .update(account)
+      .set({ status: "aposentada" })
+      .where(eq(account.id, accountId))
+      .returning({ chipId: account.chipId })
+    if (conta) {
+      await tx.update(chip).set({ status: "novo" }).where(eq(chip.id, conta.chipId))
+    }
+  })
   refresh()
 }

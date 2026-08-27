@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm"
+import { asc, eq, or } from "drizzle-orm"
 import { ShieldCheck } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -40,7 +40,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const aparelhos = await db
     .select({ id: device.id, apelido: device.apelido })
     .from(device)
-    .where(eq(device.status, "ativo"))
+    .where(or(eq(device.status, "ativo"), eq(device.id, id)))
     .orderBy(asc(device.id))
 
   const hoje = new Date()

@@ -54,7 +54,7 @@ export function CancelarConta({ accountId }: { accountId: number }) {
   return (
     <form action={cancelarConta}>
       <input type="hidden" name="accountId" value={accountId} />
-      <Button type="submit" size="sm" variant="outline">
+      <Button type="submit" size="sm" variant="destructive">
         Cancelar conta
       </Button>
     </form>
