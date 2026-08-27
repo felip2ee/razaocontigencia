@@ -65,10 +65,12 @@ export function EditarAparelho({
   deviceId,
   apelido,
   notas,
+  origem,
 }: {
   deviceId: string
   apelido: string | null
   notas: string | null
+  origem: "propria" | "externa"
 }) {
   return (
     <FormAcao acao={editarAparelho} className="flex flex-col gap-3">
@@ -80,6 +82,18 @@ export function EditarAparelho({
       <div className="grid gap-1.5">
         <Label htmlFor={`ea-notas-${deviceId}`}>Notas</Label>
         <Input id={`ea-notas-${deviceId}`} name="notas" defaultValue={notas ?? ""} />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor={`ea-origem-${deviceId}`}>Origem</Label>
+        <select
+          id={`ea-origem-${deviceId}`}
+          name="origem"
+          defaultValue={origem}
+          className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+        >
+          <option value="propria">Própria</option>
+          <option value="externa">Externa</option>
+        </select>
       </div>
       <Button type="submit" size="sm" variant="outline" className="self-start">
         Salvar

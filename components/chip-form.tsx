@@ -10,10 +10,12 @@ export function EditarChip({
   chipId,
   numero,
   operadora,
+  origem,
 }: {
   chipId: string
   numero: string
   operadora: string
+  origem: "propria" | "externa"
 }) {
   return (
     <FormAcao acao={editarChip} className="flex flex-col gap-3">
@@ -30,6 +32,18 @@ export function EditarChip({
           defaultValue={operadora}
           required
         />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor={`ec-origem-${chipId}`}>Origem</Label>
+        <select
+          id={`ec-origem-${chipId}`}
+          name="origem"
+          defaultValue={origem}
+          className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+        >
+          <option value="propria">Própria</option>
+          <option value="externa">Externa</option>
+        </select>
       </div>
       <Button type="submit" size="sm" variant="outline" className="self-start">
         Salvar

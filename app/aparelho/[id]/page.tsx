@@ -123,6 +123,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           deviceId={ficha.device.id}
           apelido={ficha.device.apelido}
           notas={ficha.device.notas}
+          origem={ficha.device.origem}
         />
       </section>
 

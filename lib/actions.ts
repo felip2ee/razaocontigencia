@@ -319,7 +319,11 @@ export async function editarChip(
   return comMensagem(async () => {
     await db
       .update(chip)
-      .set({ numero: texto(formData, "numero"), operadora: texto(formData, "operadora") })
+      .set({
+        numero: texto(formData, "numero"),
+        operadora: texto(formData, "operadora"),
+        origem: texto(formData, "origem") as "propria" | "externa",
+      })
       .where(eq(chip.id, texto(formData, "chipId")))
     return { aviso: "Chip atualizado." }
   })
@@ -335,6 +339,7 @@ export async function editarAparelho(
       .set({
         apelido: textoOpcional(formData, "apelido"),
         notas: textoOpcional(formData, "notas"),
+        origem: texto(formData, "origem") as "propria" | "externa",
       })
       .where(eq(device.id, texto(formData, "deviceId")))
     return { aviso: "Aparelho atualizado." }
