@@ -4,7 +4,7 @@ import { FormAcao } from "@/components/form-acao"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { cancelarChip, editarChip } from "@/lib/actions"
+import { cancelarChip, editarChip, reativarChip } from "@/lib/actions"
 
 export function EditarChip({
   chipId,
@@ -46,5 +46,16 @@ export function CancelarChip({ chipId }: { chipId: string }) {
         Cancelar chip
       </Button>
     </FormAcao>
+  )
+}
+
+export function ReativarChip({ chipId }: { chipId: string }) {
+  return (
+    <form action={reativarChip}>
+      <input type="hidden" name="chipId" value={chipId} />
+      <Button type="submit" size="sm" variant="outline">
+        Reativar chip
+      </Button>
+    </form>
   )
 }
