@@ -1,24 +1,16 @@
-import { asc, eq } from "drizzle-orm"
-
 import { FormAcao } from "@/components/form-acao"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ativarConta, criarAparelho, criarChip } from "@/lib/actions"
-import { db } from "@/lib/db"
-import { chipsLivres } from "@/lib/queries"
+import { chipsLivres, slotsLivres } from "@/lib/queries"
 import { NOME_DO_SLOT } from "@/lib/slots"
-import { device } from "@/lib/schema"
 
 export const dynamic = "force-dynamic"
 
 export default async function Page() {
-  const aparelhos = await db
-    .select()
-    .from(device)
-    .where(eq(device.status, "ativo"))
-    .orderBy(asc(device.id))
+  const slots = await slotsLivres()
   const livres = await chipsLivres()
 
   return (
@@ -110,32 +102,25 @@ export default async function Page() {
           </p>
           <FormAcao acao={ativarConta} className="flex flex-col gap-3">
             <div className="grid gap-1.5">
-              <Label htmlFor="co-device">Aparelho</Label>
-              <select
-                id="co-device"
-                name="deviceId"
-                required
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-              >
-                {aparelhos.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.id} {a.apelido ? `— ${a.apelido}` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="co-slot">Slot</Label>
-              <select
-                id="co-slot"
-                name="slot"
-                required
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-              >
-                <option value="wa1">{NOME_DO_SLOT.wa1}</option>
-                <option value="wa2">{NOME_DO_SLOT.wa2}</option>
-                <option value="business">{NOME_DO_SLOT.business}</option>
-              </select>
+              <Label htmlFor="co-destino">Aparelho e slot</Label>
+              {slots.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  Nenhuma vaga livre em nenhum aparelho ativo.
+                </p>
+              ) : (
+                <select
+                  id="co-destino"
+                  name="destino"
+                  required
+                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                >
+                  {slots.map((s) => (
+                    <option key={`${s.deviceId}|${s.slot}`} value={`${s.deviceId}|${s.slot}`}>
+                      {s.deviceId} {s.apelido ? `— ${s.apelido}` : ""} — {NOME_DO_SLOT[s.slot]}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="co-chip">Chip</Label>
