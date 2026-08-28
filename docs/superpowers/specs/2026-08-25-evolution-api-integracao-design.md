@@ -68,16 +68,15 @@ de `.env.local`:
   `connecting`→conectando, `close`→fechada. Erro de rede/instância
   inexistente → `desconhecido`, não lança.
 - `buscarProxy(instanceName): Promise<"sem_conexao"|"ativa"|"inativa">` —
-  GET `/proxy/find/{instance}`. Se não configurado → `sem_conexao`. Se
-  configurado, testa conectividade real: faz uma requisição de saída
-  através do proxy (host/port/credenciais retornados) contra a própria
-  `EVOLUTION_API_URL` (não um site externo — evita depender de terceiro),
-  com timeout de 5s, usando `undici.ProxyAgent`. Sucesso → `ativa`, falha ou
-  timeout → `inativa`.
+  GET `/proxy/find/{instance}`. Sem host → `sem_conexao`; host +
+  `enabled:false` → `inativa`; host + ligado → `ativa`.
+  **Corrigido em 2026-08-28:** a versão original testava conectividade real
+  através do proxy contra a própria `EVOLUTION_API_URL`. O host da Evolution
+  recusa IP de datacenter de proxy, então todo proxy funcionando dava
+  "inativa". O teste ao vivo (e a dependência `undici`/`ProxyAgent`) foi
+  removido — `buscarProxy` só reporta o que a Evolution já sabe.
 - `pedirQrCode(instanceName): Promise<string>` — POST `/instance/connect/{instance}`,
   retorna o base64 do QR code.
-
-Nova dependência: `undici` (para `ProxyAgent`).
 
 ## Server actions (`lib/evolution-actions.ts`)
 

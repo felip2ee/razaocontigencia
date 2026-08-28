@@ -8,16 +8,17 @@ zero nem os "conserte" sem entender o motivo de estarem abertos.
 ## Comportamento
 
 **Contas existentes começam sem instância.** Depois da migração `0003`, toda
-conta tem `instance_name` nulo até o operador associá-la na ficha do aparelho.
-Enquanto nula, a sincronização com a Evolution fica em "desconhecido" — é o
-comportamento esperado, não um bug.
+conta tem `instance_name` nulo até ser associada. "Verificar todas" tenta
+associar sozinho pelo número do chip (`acharInstancia`), mas só quando o match
+é único; o resto o operador resolve na ficha do aparelho. Enquanto nula, a
+sincronização fica em "desconhecido" — comportamento esperado, não bug.
 
-**Teste de proxy pode dar "inativa" mesmo com proxy configurado.**
-`buscarProxy` em `lib/evolution.ts` faz uma requisição de saída real através do
-proxy contra a própria `EVOLUTION_API_URL`, com timeout de 5s. Se o proxy tem
-credenciais mas não roteia até a Evolution (ou a Evolution recusa a volta por
-ele), o resultado é "inativa". Foi visto em produção; é resultado real da
-checagem, não falha do código.
+**`buscarProxy` não testa conectividade, só lê o que a Evolution sabe.**
+A versão antiga fazia uma requisição real através do proxy contra a própria
+`EVOLUTION_API_URL` — e o host da Evolution recusa IP de datacenter de proxy,
+então todo proxy funcionando dava "inativa". Agora: sem host → `sem_conexao`;
+host + `enabled:false` → `inativa`; host + ligado → `ativa`. Se o proxy estiver
+de fato quebrado, isso aparece no status da conexão, que é quem usa o proxy.
 
 **Fuso horário do início de restrição e ban.** O campo `<input type="datetime-local">`
 em `components/incident-form.tsx` manda um texto sem sufixo de fuso, e

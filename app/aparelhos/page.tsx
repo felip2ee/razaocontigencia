@@ -7,7 +7,6 @@ import { FiltroLista } from "@/components/filtro-lista"
 import { OrigemBadge } from "@/components/origem-badge"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge, StatusDeCadastro } from "@/components/status-badge"
-import { VerificarConexao } from "@/components/verificar-conexao"
 import { VerificarTodas } from "@/components/verificar-todas"
 import { ViewToggle } from "@/components/view-toggle"
 import {
@@ -19,7 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { listarAparelhosComResumo } from "@/lib/queries"
-import { NOME_DO_SLOT } from "@/lib/slots"
+import { NOME_DO_SLOT, tipoDoSlot } from "@/lib/slots"
 import { cn, LINK } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
@@ -83,56 +82,85 @@ export default async function Page({
                 <TableHead>Status</TableHead>
                 <TableHead>Origem</TableHead>
                 <TableHead>Bans</TableHead>
-                <TableHead>Contas</TableHead>
+                <TableHead>Chip</TableHead>
+                <TableHead>Número</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Saúde</TableHead>
+                <TableHead>Conexão</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {aparelhos.map((a) => (
-                <TableRow key={a.id}>
-                  <TableCell className="align-top">
-                    <Link href={`/aparelho/${a.id}`} className={cn(LINK, "font-medium")}>
-                      {a.id}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground align-top">
-                    {a.apelido ?? "Sem apelido"}
-                  </TableCell>
-                  <TableCell className="align-top">
-                    <StatusDeCadastro valor={a.status} />
-                  </TableCell>
-                  <TableCell className="align-top">
-                    <OrigemBadge origem={a.origem} />
-                    {a.origem === "propria" && (
-                      <span className="text-muted-foreground text-xs">Própria</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="align-top tabular-nums">{a.totalBans}</TableCell>
-                  <TableCell className="align-top">
-                    {a.contas.length === 0 ? (
-                      <span className="text-muted-foreground">Nenhuma conta ativa</span>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        {a.contas.map((c) => (
-                          <div key={c.id} className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-medium tabular-nums">{c.numero}</span>
-                            <span className="text-muted-foreground text-xs">{c.chipId}</span>
-                            <span className="text-muted-foreground text-xs">
-                              {NOME_DO_SLOT[c.slot]}
-                            </span>
-                            <StatusBadge estado={estadoDaConta(c.incidenteAberto)} />
-                            <ConexaoBadge
-                              status={c.evolutionStatus}
-                              proxy={c.proxyStatus}
-                              statusVerificadoEm={c.statusVerificadoEm}
-                            />
-                            <VerificarConexao accountId={c.id} />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {aparelhos.map((a) => {
+                const semContas = a.contas.length === 0
+                // Cada coluna de conta empilha um valor por conta, na mesma
+                // ordem — a linha N de "Chip" é a mesma conta da linha N de
+                // "Conexão". É isso que dá o efeito de colunas sem quebrar
+                // o aparelho em várias linhas.
+                const coluna = (
+                  render: (c: (typeof a.contas)[number]) => React.ReactNode,
+                ) =>
+                  semContas ? (
+                    <span className="text-muted-foreground">—</span>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {a.contas.map((c) => (
+                        <div key={c.id}>{render(c)}</div>
+                      ))}
+                    </div>
+                  )
+
+                return (
+                  <TableRow key={a.id}>
+                    <TableCell className="align-top">
+                      <Link href={`/aparelho/${a.id}`} className={cn(LINK, "font-medium")}>
+                        {a.id}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground align-top">
+                      {a.apelido ?? "Sem apelido"}
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <StatusDeCadastro valor={a.status} />
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <OrigemBadge origem={a.origem} />
+                      {a.origem === "propria" && (
+                        <span className="text-muted-foreground text-xs">Própria</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="align-top tabular-nums">{a.totalBans}</TableCell>
+                    <TableCell className="align-top">
+                      {coluna((c) => (
+                        <Link href={`/chip/${c.chipId}`} className={cn(LINK, "text-sm")}>
+                          {c.chipId}
+                        </Link>
+                      ))}
+                    </TableCell>
+                    <TableCell className="align-top">
+                      {coluna((c) => (
+                        <span className="text-sm tabular-nums">{c.numero}</span>
+                      ))}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground align-top">
+                      {coluna((c) => <span className="text-sm">{tipoDoSlot(c.slot)}</span>)}
+                    </TableCell>
+                    <TableCell className="align-top">
+                      {coluna((c) => (
+                        <StatusBadge estado={estadoDaConta(c.incidenteAberto)} />
+                      ))}
+                    </TableCell>
+                    <TableCell className="align-top">
+                      {coluna((c) => (
+                        <ConexaoBadge
+                          status={c.evolutionStatus}
+                          proxy={c.proxyStatus}
+                          statusVerificadoEm={c.statusVerificadoEm}
+                        />
+                      ))}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </div>
@@ -180,14 +208,11 @@ export default async function Page({
                         </span>
                       </div>
                       <StatusBadge estado={estadoDaConta(c.incidenteAberto)} />
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <ConexaoBadge
-                          status={c.evolutionStatus}
-                          proxy={c.proxyStatus}
-                          statusVerificadoEm={c.statusVerificadoEm}
-                        />
-                        <VerificarConexao accountId={c.id} />
-                      </div>
+                      <ConexaoBadge
+                        status={c.evolutionStatus}
+                        proxy={c.proxyStatus}
+                        statusVerificadoEm={c.statusVerificadoEm}
+                      />
                     </div>
                   ))}
                 </div>

@@ -1,11 +1,17 @@
 "use server"
 
-import { eq } from "drizzle-orm"
+import { and, eq, inArray, isNull } from "drizzle-orm"
 import { refresh } from "next/cache"
 
 import { db } from "./db.ts"
-import { buscarProxy, buscarStatusConexao, pedirQrCode } from "./evolution.ts"
-import { account } from "./schema.ts"
+import {
+  acharInstancia,
+  buscarProxy,
+  buscarStatusConexao,
+  listarInstancias,
+  pedirQrCode,
+} from "./evolution.ts"
+import { account, chip } from "./schema.ts"
 
 /** Nome da instância na Evolution vem da coluna `account.instance_name`, que o
  * operador associa pela ficha do aparelho. É rótulo livre lá, nunca derivável
@@ -57,6 +63,34 @@ export async function verificarConexao(accountId: number): Promise<void> {
 
 const TAMANHO_LOTE = 8
 
+/**
+ * Antes de verificar em lote, tenta associar sozinho as contas sem instância:
+ * busca a lista da Evolution uma vez e casa pelo número do chip. Só grava
+ * quando o match é único — 0 ou 2+ instâncias e a conta fica pro operador
+ * resolver na ficha.
+ */
+async function autoAssociarInstancias(accountIds: number[]): Promise<void> {
+  if (accountIds.length === 0) return
+
+  const semInstancia = await db
+    .select({ id: account.id, numero: chip.numero })
+    .from(account)
+    .innerJoin(chip, eq(chip.id, account.chipId))
+    .where(and(inArray(account.id, accountIds), isNull(account.instanceName)))
+
+  if (semInstancia.length === 0) return
+
+  const instancias = await listarInstancias()
+  if (instancias.length === 0) return
+
+  for (const conta of semInstancia) {
+    const nome = acharInstancia(conta.numero, instancias)
+    if (nome) {
+      await db.update(account).set({ instanceName: nome }).where(eq(account.id, conta.id))
+    }
+  }
+}
+
 /** Mesma coisa, em lote — base do botão "Verificar todas" das páginas de
  * lista. Um único `refresh()` no final, não um por conta.
  *
@@ -65,6 +99,8 @@ const TAMANHO_LOTE = 8
  * de até 5s) simultâneas. Falha de uma conta não derruba as outras nem trava
  * o refresh — `allSettled` sempre deixa o refresh rodar no final. */
 export async function verificarConexoes(accountIds: number[]): Promise<void> {
+  await autoAssociarInstancias(accountIds)
+
   for (let i = 0; i < accountIds.length; i += TAMANHO_LOTE) {
     const lote = accountIds.slice(i, i + TAMANHO_LOTE)
     await Promise.allSettled(lote.map((id) => verificarSemRefresh(id)))

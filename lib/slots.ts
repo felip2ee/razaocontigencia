@@ -7,3 +7,8 @@ export const NOME_DO_SLOT: Record<string, string> = {
   wa2: "WhatsApp 2",
   business: "WhatsApp Business",
 }
+
+/** Tipo do WhatsApp da conta — derivado do slot, sem campo no banco. */
+export function tipoDoSlot(slot: string): "Business" | "Normal" {
+  return slot === "business" ? "Business" : "Normal"
+}

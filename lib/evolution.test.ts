@@ -1,11 +1,11 @@
 import assert from "node:assert/strict"
-import http from "node:http"
-import type { AddressInfo } from "node:net"
 import { afterEach, test } from "node:test"
 
 import {
+  acharInstancia,
   buscarProxy,
   buscarStatusConexao,
+  type InstanciaEvolution,
   normalizarNumero,
   pedirQrCode,
 } from "./evolution.ts"
@@ -31,6 +31,34 @@ function mockFetch(porCaminho: Record<string, () => Response>) {
 test("normalizarNumero: remove tudo que não é dígito", () => {
   assert.equal(normalizarNumero("+55 (11) 99999-8888"), "5511999998888")
   assert.equal(normalizarNumero("5511999998888"), "5511999998888")
+})
+
+function inst(name: string, digitos: string[]): InstanciaEvolution {
+  return { name, numero: digitos[0] ?? null, status: "aberta", digitos }
+}
+
+test("acharInstancia: casa por sufixo de dígitos (chip sem DDI, instância com)", () => {
+  const instancias = [
+    inst("39fernanda", ["5563992026453"]),
+    inst("02- 5563981263783", ["5563981263783", "556381263783"]),
+  ]
+  assert.equal(acharInstancia("63981263783", instancias), "02- 5563981263783")
+})
+
+test("acharInstancia: 2+ instâncias casam → null", () => {
+  const instancias = [
+    inst("a", ["5563981263783"]),
+    inst("b", ["553563981263783"]),
+  ]
+  assert.equal(acharInstancia("63981263783", instancias), null)
+})
+
+test("acharInstancia: nenhuma casa → null", () => {
+  assert.equal(acharInstancia("63999999999", [inst("x", ["5563981263783"])]), null)
+})
+
+test("acharInstancia: número curto demais → null", () => {
+  assert.equal(acharInstancia("12345", [inst("x", ["12345"])]), null)
 })
 
 test("buscarStatusConexao: open vira aberta", async () => {
@@ -69,104 +97,32 @@ test("buscarStatusConexao: resposta sem instance vira desconhecido", async () =>
   assert.equal(await buscarStatusConexao("5511999998888"), "desconhecido")
 })
 
-test("buscarProxy: sem proxy configurado vira sem_conexao", async () => {
+test("buscarProxy: sem host vira sem_conexao", async () => {
   mockFetch({ "/proxy/find/5511999998888": () => Response.json({ enabled: false }) })
   assert.equal(await buscarProxy("5511999998888"), "sem_conexao")
 })
 
-test("buscarProxy: dados de proxy malformados (URL inválida) vira inativa, não lança", async () => {
+test("buscarProxy: host com enabled vira ativa", async () => {
   mockFetch({
     "/proxy/find/5511999998888": () =>
-      Response.json({ host: "proxy inválido", port: "not-a-port", protocol: "não-http" }),
+      Response.json({ enabled: true, host: "proxy.x.com", port: "8080" }),
+  })
+  assert.equal(await buscarProxy("5511999998888"), "ativa")
+})
+
+test("buscarProxy: host com enabled:false vira inativa", async () => {
+  mockFetch({
+    "/proxy/find/5511999998888": () =>
+      Response.json({ enabled: false, host: "proxy.x.com", port: "8080" }),
   })
   assert.equal(await buscarProxy("5511999998888"), "inativa")
 })
 
-/** Proxy HTTP mínimo: reencaminha o request pra URL absoluta pedida.
- * Simula um proxy de verdade (o operador configura um na Evolution) —
- * é isto que a `ProxyAgent`/dispatcher precisa atravessar de fato.
- *
- * `testarProxy` faz a chamada de conectividade com o fetch do próprio undici
- * (não o fetch global), então essas duas continuam mockando só o global fetch
- * pra `/proxy/find` — a etapa de conectividade em si atravessa rede de
- * verdade contra um proxy e um alvo locais, exatamente como Critical 2 pede. */
-function criarProxyHttp(): Promise<{ server: http.Server; port: number }> {
-  return new Promise((resolve) => {
-    const server = http.createServer((req, res) => {
-      const alvo = new URL(req.url ?? "")
-      const proxyReq = http.request(
-        {
-          hostname: alvo.hostname,
-          port: alvo.port,
-          path: alvo.pathname + alvo.search,
-          method: req.method,
-          headers: req.headers,
-        },
-        (proxyRes) => {
-          res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers)
-          proxyRes.pipe(res)
-        },
-      )
-      req.pipe(proxyReq)
-    })
-    server.listen(0, "127.0.0.1", () => {
-      resolve({ server, port: (server.address() as AddressInfo).port })
-    })
-  })
-}
-
-test("buscarProxy: atravessa de fato um proxy HTTP real via ProxyAgent (não mocka o transporte)", async () => {
-  const { server: proxy, port: proxyPort } = await criarProxyHttp()
-  const alvo = http.createServer((req, res) => {
-    if (req.url === "/proxy/find/5511999998888") {
-      res.setHeader("content-type", "application/json")
-      res.end(JSON.stringify({ host: "127.0.0.1", port: proxyPort, protocol: "http" }))
-      return
-    }
-    res.end("ok")
-  })
-  await new Promise<void>((resolve) => alvo.listen(0, "127.0.0.1", () => resolve()))
-  const alvoPort = (alvo.address() as AddressInfo).port
-  const urlOriginal = process.env.EVOLUTION_API_URL
-  process.env.EVOLUTION_API_URL = `http://127.0.0.1:${alvoPort}`
-
-  try {
-    // Se testarProxy voltar a usar o fetch global em vez do fetch do undici,
-    // o dispatcher da ProxyAgent não funciona com o fetch global (versões
-    // incompatíveis de undici) e isto cai pra "inativa".
-    assert.equal(await buscarProxy("5511999998888"), "ativa")
-  } finally {
-    process.env.EVOLUTION_API_URL = urlOriginal
-    await new Promise((resolve) => alvo.close(resolve))
-    await new Promise((resolve) => proxy.close(resolve))
-  }
-})
-
-test("buscarProxy: proxy configurado mas inalcançável vira inativa", async () => {
-  // Porta fechada de propósito: conexão recusada rápido, sem depender de IP
-  // não roteável (que pendura no timeout de 5s do testarProxy).
-  const { server: portaFechada, port: proxyPort } = await criarProxyHttp()
-  await new Promise((resolve) => portaFechada.close(resolve))
-
-  const alvo = http.createServer((req, res) => {
-    if (req.url === "/proxy/find/5511999998888") {
-      res.setHeader("content-type", "application/json")
-      res.end(JSON.stringify({ host: "127.0.0.1", port: proxyPort, protocol: "http" }))
-      return
-    }
-    res.end("ok")
-  })
-  await new Promise<void>((resolve) => alvo.listen(0, "127.0.0.1", () => resolve()))
-  const alvoPort = (alvo.address() as AddressInfo).port
-  const urlOriginal = process.env.EVOLUTION_API_URL
-  process.env.EVOLUTION_API_URL = `http://127.0.0.1:${alvoPort}`
-
-  try {
-    assert.equal(await buscarProxy("5511999998888"), "inativa")
-  } finally {
-    process.env.EVOLUTION_API_URL = urlOriginal
-    await new Promise((resolve) => alvo.close(resolve))
-  }
+test("buscarProxy: erro de rede vira sem_conexao, não lança", async () => {
+  globalThis.fetch = (async () => {
+    throw new Error("network down")
+  }) as typeof fetch
+  assert.equal(await buscarProxy("5511999998888"), "sem_conexao")
 })
 
 test("pedirQrCode: devolve o base64 da resposta", async () => {

@@ -1,5 +1,3 @@
-import { ProxyAgent, fetch as fetchUndici } from "undici"
-
 /** Instância na Evolution é nomeada com o número do WhatsApp, sem formatação.
  * `chip.numero` pode estar salvo com parênteses/traço/DDI — normalizar cobre
  * os dois formatos e sempre compara maçã com maçã contra a Evolution. */
@@ -48,6 +46,33 @@ export type InstanciaEvolution = {
   name: string
   numero: string | null
   status: "aberta" | "conectando" | "fechada" | "desconhecido"
+  /** `number` e `ownerJid` só com dígitos, ≥ 10 — usados no auto-match. */
+  digitos: string[]
+}
+
+/** Comprimento mínimo pra um par de números ser comparável sem falso
+ * positivo — DDD + assinante. Abaixo disso o sufixo coincide fácil demais. */
+const MIN_DIGITOS = 10
+
+/**
+ * Acha a instância de um número de chip por sufixo de dígitos: o app guarda
+ * `63981263783`, a Evolution guarda `5563981263783` — um é sufixo do outro.
+ * Compara contra `number` e `ownerJid` de cada instância. Devolve o nome só
+ * quando **exatamente uma** instância casa; 0 ou 2+ → `null` (impossível
+ * associar sem chutar).
+ */
+export function acharInstancia(
+  numeroChip: string,
+  instancias: InstanciaEvolution[],
+): string | null {
+  const alvo = numeroChip.replace(/\D/g, "")
+  if (alvo.length < MIN_DIGITOS) return null
+
+  const casa = (a: string, b: string) =>
+    a.length >= MIN_DIGITOS && b.length >= MIN_DIGITOS && (a.endsWith(b) || b.endsWith(a))
+
+  const achados = instancias.filter((i) => i.digitos.some((d) => casa(alvo, d)))
+  return achados.length === 1 ? achados[0].name : null
 }
 
 /** Lista as instâncias que existem na Evolution — a fonte pra associar cada
@@ -58,11 +83,16 @@ export async function listarInstancias(): Promise<InstanciaEvolution[]> {
   if (!Array.isArray(dados)) return []
   return dados
     .filter((i): i is InstanciaApi & { name: string } => typeof i.name === "string")
-    .map((i) => ({
-      name: i.name,
-      numero: i.number ?? i.ownerJid?.replace(/@.*/, "") ?? null,
-      status: mapearEstado(i.connectionStatus),
-    }))
+    .map((i) => {
+      const doNumber = (i.number ?? "").replace(/\D/g, "")
+      const doOwner = (i.ownerJid ?? "").replace(/\D/g, "")
+      return {
+        name: i.name,
+        numero: i.number ?? i.ownerJid?.replace(/@.*/, "") ?? null,
+        status: mapearEstado(i.connectionStatus),
+        digitos: [doNumber, doOwner].filter((d) => d.length >= 10),
+      }
+    })
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
@@ -80,52 +110,25 @@ export async function buscarStatusConexao(
 type ProxyApi = {
   enabled?: boolean
   host?: string
-  port?: number | string
-  protocol?: string
-  username?: string | null
-  password?: string | null
 }
 
-/** Testa se o proxy salvo na Evolution de fato funciona: uma requisição de saída
- * de verdade através dele contra a própria Evolution API (não terceiro), com
- * timeout curto pra não travar a UI. */
-async function testarProxy(proxy: {
-  host: string
-  port: string
-  protocol: string
-  username?: string | null
-  password?: string | null
-}): Promise<boolean> {
-  const auth = proxy.username && proxy.password ? `${proxy.username}:${proxy.password}@` : ""
-  let agente: ProxyAgent | undefined
-  try {
-    agente = new ProxyAgent(`${proxy.protocol}://${auth}${proxy.host}:${proxy.port}`)
-    const resposta = await fetchUndici(baseUrl(), {
-      dispatcher: agente,
-      signal: AbortSignal.timeout(5000),
-    })
-    return resposta.ok
-  } catch {
-    return false
-  } finally {
-    await agente?.close()
-  }
-}
-
+/**
+ * Estado do proxy pelo que a Evolution já sabe — sem teste de conectividade
+ * ao vivo. O teste antigo batia na própria Evolution através do proxy, e o
+ * host da Evolution recusa IP de datacenter de proxy: dava "inativa" pra todo
+ * proxy funcionando. Quem de fato usa o proxy é a Evolution nas mensagens; se
+ * estiver quebrado, aparece no status da conexão.
+ *
+ * - sem host        → sem_conexao (sem proxy configurado)
+ * - host + off      → inativa (configurado mas desligado)
+ * - host + ligado   → ativa
+ */
 export async function buscarProxy(
   instanceName: string,
 ): Promise<"sem_conexao" | "ativa" | "inativa"> {
   const dados = await chamarEvolution<ProxyApi>(`/proxy/find/${instanceName}`)
   if (!dados?.host) return "sem_conexao"
-
-  const funcionou = await testarProxy({
-    host: dados.host,
-    port: String(dados.port ?? "80"),
-    protocol: dados.protocol ?? "http",
-    username: dados.username,
-    password: dados.password,
-  })
-  return funcionou ? "ativa" : "inativa"
+  return dados.enabled === false ? "inativa" : "ativa"
 }
 
 type ConnectApi = { base64?: string }
