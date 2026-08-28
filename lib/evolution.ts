@@ -28,6 +28,44 @@ async function chamarEvolution<T>(caminho: string, init?: RequestInit): Promise<
   }
 }
 
+function mapearEstado(
+  estado: string | undefined,
+): "aberta" | "conectando" | "fechada" | "desconhecido" {
+  if (estado === "open") return "aberta"
+  if (estado === "connecting") return "conectando"
+  if (estado === "close") return "fechada"
+  return "desconhecido"
+}
+
+type InstanciaApi = {
+  name?: string
+  number?: string | null
+  ownerJid?: string | null
+  connectionStatus?: string
+}
+
+export type InstanciaEvolution = {
+  name: string
+  numero: string | null
+  status: "aberta" | "conectando" | "fechada" | "desconhecido"
+}
+
+/** Lista as instâncias que existem na Evolution — a fonte pra associar cada
+ * conta ao nome certo. O nome é rótulo livre; o número é só pra ajudar o
+ * operador a reconhecer qual é qual. */
+export async function listarInstancias(): Promise<InstanciaEvolution[]> {
+  const dados = await chamarEvolution<InstanciaApi[]>(`/instance/fetchInstances`)
+  if (!Array.isArray(dados)) return []
+  return dados
+    .filter((i): i is InstanciaApi & { name: string } => typeof i.name === "string")
+    .map((i) => ({
+      name: i.name,
+      numero: i.number ?? i.ownerJid?.replace(/@.*/, "") ?? null,
+      status: mapearEstado(i.connectionStatus),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
 type ConnectionStateApi = { instance?: { state?: string } }
 
 export async function buscarStatusConexao(
@@ -36,11 +74,7 @@ export async function buscarStatusConexao(
   const dados = await chamarEvolution<ConnectionStateApi>(
     `/instance/connectionState/${instanceName}`,
   )
-  const estado = dados?.instance?.state
-  if (estado === "open") return "aberta"
-  if (estado === "connecting") return "conectando"
-  if (estado === "close") return "fechada"
-  return "desconhecido"
+  return mapearEstado(dados?.instance?.state)
 }
 
 type ProxyApi = {

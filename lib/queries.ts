@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, isNotNull, isNull, max, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, gte, ilike, isNotNull, isNull, max, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 
 import { db } from "./db.ts"
@@ -132,6 +132,7 @@ export type FichaAparelho = {
   chipNaBandeja: typeof chip.$inferSelect | null
   contas: (ContaNaLista & {
     status: "ativa" | "aposentada"
+    instanceName: string | null
     incidenteAberto: ContaComIncidente | null
   })[]
   historico: (typeof incident.$inferSelect & { slot: string; chipId: string })[]
@@ -148,7 +149,7 @@ export async function fichaDoAparelho(id: string): Promise<FichaAparelho | null>
     .where(and(eq(chip.bandejaDeviceId, id), eq(chip.local, "bandeja")))
 
   const contas = await db
-    .select({ ...CAMPOS_DA_CONTA, status: account.status })
+    .select({ ...CAMPOS_DA_CONTA, status: account.status, instanceName: account.instanceName })
     .from(account)
     .innerJoin(chip, eq(chip.id, account.chipId))
     .where(and(eq(account.deviceId, id), eq(account.status, "ativa")))
@@ -329,10 +330,16 @@ export type AparelhoResumo = {
 export async function listarAparelhosComResumo(filtro?: {
   status?: string
   origem?: string
+  q?: string
 }): Promise<AparelhoResumo[]> {
   const condicoesDevice = []
   if (filtro?.status) condicoesDevice.push(eq(device.status, filtro.status as "ativo" | "quarentena" | "aposentado"))
   if (filtro?.origem) condicoesDevice.push(eq(device.origem, filtro.origem as "propria" | "externa"))
+  const termo = filtro?.q?.trim()
+  if (termo) {
+    const alvo = `%${termo}%`
+    condicoesDevice.push(or(ilike(device.id, alvo), ilike(device.apelido, alvo)))
+  }
 
   const [devices, contas, abertos, historico] = await Promise.all([
     db
@@ -398,10 +405,16 @@ export type ChipResumo = {
 export async function listarChipsComResumo(filtro?: {
   status?: string
   origem?: string
+  q?: string
 }): Promise<ChipResumo[]> {
   const condicoesChip = []
   if (filtro?.status) condicoesChip.push(eq(chip.status, filtro.status as "novo" | "em_uso" | "aposentado"))
   if (filtro?.origem) condicoesChip.push(eq(chip.origem, filtro.origem as "propria" | "externa"))
+  const termo = filtro?.q?.trim()
+  if (termo) {
+    const alvo = `%${termo}%`
+    condicoesChip.push(or(ilike(chip.id, alvo), ilike(chip.numero, alvo), ilike(chip.operadora, alvo)))
+  }
 
   const [chips, contas] = await Promise.all([
     db

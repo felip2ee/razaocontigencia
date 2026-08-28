@@ -7,6 +7,18 @@ zero nem os "conserte" sem entender o motivo de estarem abertos.
 
 ## Comportamento
 
+**Contas existentes começam sem instância.** Depois da migração `0003`, toda
+conta tem `instance_name` nulo até o operador associá-la na ficha do aparelho.
+Enquanto nula, a sincronização com a Evolution fica em "desconhecido" — é o
+comportamento esperado, não um bug.
+
+**Teste de proxy pode dar "inativa" mesmo com proxy configurado.**
+`buscarProxy` em `lib/evolution.ts` faz uma requisição de saída real através do
+proxy contra a própria `EVOLUTION_API_URL`, com timeout de 5s. Se o proxy tem
+credenciais mas não roteia até a Evolution (ou a Evolution recusa a volta por
+ele), o resultado é "inativa". Foi visto em produção; é resultado real da
+checagem, não falha do código.
+
 **Fuso horário do início de restrição e ban.** O campo `<input type="datetime-local">`
 em `components/incident-form.tsx` manda um texto sem sufixo de fuso, e
 `registrarIncidente` em `lib/actions.ts` o converte com `new Date(...)`, que interpreta
@@ -33,9 +45,6 @@ Segue o spec ao pé da letra; vale reconsiderar a regra.
 ficam arquivados na pasta, mas nada impede mover para gaveta ou bandeja um chip `em_uso`.
 Foi julgado escopo correto — o chip físico é ortogonal à conta — mas está registrado caso
 a prática mostre o contrário.
-
-**Busca sensível a maiúsculas.** `app/busca/route.ts` compara o ID exatamente. Código de
-fita digitado em minúscula cai em "não encontrado".
 
 **`marcarTarefa` grava `feitoEm` também quando a tarefa é pulada**, o que torna o campo
 ambíguo se algum dia for usado para medir execução.

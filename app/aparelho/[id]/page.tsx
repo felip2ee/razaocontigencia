@@ -3,7 +3,12 @@ import { ShieldCheck } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
-import { CancelarConta, CorrigirAparelho, EditarAparelho } from "@/components/aparelho-form"
+import {
+  CancelarConta,
+  CorrigirAparelho,
+  DefinirInstancia,
+  EditarAparelho,
+} from "@/components/aparelho-form"
 import { ConexaoBadge } from "@/components/conexao-badge"
 import { EmptyState } from "@/components/empty-state"
 import { EncerrarIncidente, RegistrarIncidente } from "@/components/incident-form"
@@ -22,6 +27,7 @@ import {
 } from "@/components/ui/table"
 import { mudarStatusDoAparelho } from "@/lib/actions"
 import { db } from "@/lib/db"
+import { listarInstancias } from "@/lib/evolution"
 import { fichaDoAparelho } from "@/lib/queries"
 import { device } from "@/lib/schema"
 import { NOME_DO_SLOT, SLOTS } from "@/lib/slots"
@@ -42,6 +48,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     .from(device)
     .where(or(eq(device.status, "ativo"), eq(device.id, id)))
     .orderBy(asc(device.id))
+
+  const instancias = await listarInstancias()
 
   const hoje = new Date()
 
@@ -123,6 +131,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           deviceId={ficha.device.id}
           apelido={ficha.device.apelido}
           notas={ficha.device.notas}
+          origem={ficha.device.origem}
         />
       </section>
 
@@ -205,6 +214,13 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 ) : (
                   <VerificarConexao accountId={c.id} />
                 )}
+              </div>
+              <div className="border-border flex flex-wrap items-center gap-2 border-t pt-2">
+                <DefinirInstancia
+                  accountId={c.id}
+                  instanceAtual={c.instanceName}
+                  instancias={instancias}
+                />
               </div>
               <div className="border-border flex flex-wrap items-center gap-2 border-t pt-2">
                 <CorrigirAparelho

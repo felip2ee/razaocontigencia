@@ -9,6 +9,15 @@ import { PageHeader } from "@/components/page-header"
 import { StatusDeCadastro } from "@/components/status-badge"
 import { VerificarConexao } from "@/components/verificar-conexao"
 import { VerificarTodas } from "@/components/verificar-todas"
+import { ViewToggle } from "@/components/view-toggle"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { listarChipsComResumo } from "@/lib/queries"
 import { NOME_DO_SLOT } from "@/lib/slots"
 import { cn, LINK } from "@/lib/utils"
@@ -21,6 +30,11 @@ const LOCAL_TEXTO: Record<string, string> = {
   bandeja: "Bandeja",
 }
 
+function textoDoLocal(local: string, posicao: string | null) {
+  if (local === "pasta" && posicao) return `Pasta — ${posicao}`
+  return LOCAL_TEXTO[local] ?? local
+}
+
 export default async function Page({
   searchParams,
 }: {
@@ -29,8 +43,10 @@ export default async function Page({
   const params = await searchParams
   const status = typeof params.status === "string" && params.status !== "" ? params.status : undefined
   const origem = typeof params.origem === "string" && params.origem !== "" ? params.origem : undefined
+  const q = typeof params.q === "string" && params.q !== "" ? params.q : undefined
+  const view = params.view === "lista" ? "lista" : "blocos"
 
-  const chips = await listarChipsComResumo({ status, origem })
+  const chips = await listarChipsComResumo({ status, origem, q })
   const todasAsContas = chips.flatMap((c) => (c.conta ? [c.conta.id] : []))
 
   return (
@@ -41,23 +57,94 @@ export default async function Page({
         acoes={<VerificarTodas accountIds={todasAsContas} />}
       />
 
-      <FiltroLista
-        statusOpcoes={[
-          { valor: "novo", rotulo: "Novo" },
-          { valor: "em_uso", rotulo: "Em uso" },
-          { valor: "aposentado", rotulo: "Aposentado" },
-        ]}
-        statusAtual={status}
-        origemAtual={origem}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <FiltroLista
+          statusOpcoes={[
+            { valor: "novo", rotulo: "Novo" },
+            { valor: "em_uso", rotulo: "Em uso" },
+            { valor: "aposentado", rotulo: "Aposentado" },
+          ]}
+          statusAtual={status}
+          origemAtual={origem}
+          buscaAtual={q}
+          viewAtual={view === "lista" ? "lista" : undefined}
+          buscaPlaceholder="ID, número ou operadora"
+        />
+        <ViewToggle params={params} atual={view} />
+      </div>
 
       {chips.length === 0 ? (
         <EmptyState
           Icone={CircuitBoard}
           Ilustracao="/vazio-cadastro.png"
-          titulo="Nenhum chip cadastrado"
-          descricao="Cadastre um chip para começar."
+          titulo="Nenhum chip encontrado"
+          descricao="Ajuste a busca ou os filtros, ou cadastre um chip."
         />
+      ) : view === "lista" ? (
+        <div className="bg-card border-border overflow-x-auto rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>Número</TableHead>
+                <TableHead>Operadora</TableHead>
+                <TableHead>Local</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Origem</TableHead>
+                <TableHead>Conta</TableHead>
+                <TableHead>Conexão</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {chips.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell>
+                    <Link href={`/chip/${c.id}`} className={cn(LINK, "font-medium")}>
+                      {c.id}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="tabular-nums">{c.numero}</TableCell>
+                  <TableCell className="text-muted-foreground">{c.operadora}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {textoDoLocal(c.local, c.posicao)}
+                  </TableCell>
+                  <TableCell>
+                    <StatusDeCadastro valor={c.status} colorido />
+                  </TableCell>
+                  <TableCell>
+                    <OrigemBadge origem={c.origem} />
+                    {c.origem === "propria" && (
+                      <span className="text-muted-foreground text-xs">Própria</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {c.conta ? (
+                      <Link href={`/aparelho/${c.conta.deviceId}`} className={LINK}>
+                        {c.conta.deviceId} — {NOME_DO_SLOT[c.conta.slot]}
+                      </Link>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {c.conta ? (
+                      <div className="flex items-center gap-2">
+                        <ConexaoBadge
+                          status={c.conta.evolutionStatus}
+                          proxy={c.conta.proxyStatus}
+                          statusVerificadoEm={c.conta.statusVerificadoEm}
+                        />
+                        <VerificarConexao accountId={c.conta.id} />
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {chips.map((c) => (

@@ -4,23 +4,39 @@ import { eq } from "drizzle-orm"
 import { refresh } from "next/cache"
 
 import { db } from "./db.ts"
-import { buscarProxy, buscarStatusConexao, normalizarNumero, pedirQrCode } from "./evolution.ts"
-import { account, chip } from "./schema.ts"
+import { buscarProxy, buscarStatusConexao, pedirQrCode } from "./evolution.ts"
+import { account } from "./schema.ts"
 
-/** Instância na Evolution é nomeada com o número — nunca com o ID da conta.
- * Toda action que fala com a Evolution passa por aqui pra resolver o nome. */
-async function instanceNameDaConta(accountId: number): Promise<string> {
+/** Nome da instância na Evolution vem da coluna `account.instance_name`, que o
+ * operador associa pela ficha do aparelho. É rótulo livre lá, nunca derivável
+ * do número — por isso é guardado e não calculado. `null` = ainda não
+ * associada. */
+async function instanceNameDaConta(accountId: number): Promise<string | null> {
   const [linha] = await db
-    .select({ numero: chip.numero })
+    .select({ instanceName: account.instanceName })
     .from(account)
-    .innerJoin(chip, eq(chip.id, account.chipId))
     .where(eq(account.id, accountId))
   if (!linha) throw new Error("Conta não encontrada.")
-  return normalizarNumero(linha.numero)
+  return linha.instanceName
 }
 
 async function verificarSemRefresh(accountId: number): Promise<void> {
   const instanceName = await instanceNameDaConta(accountId)
+
+  // Sem instância associada não há o que consultar: registra "desconhecido" e
+  // carimba a verificação pra a ficha mostrar que já tentou.
+  if (!instanceName) {
+    await db
+      .update(account)
+      .set({
+        evolutionStatus: "desconhecido",
+        proxyStatus: "sem_conexao",
+        statusVerificadoEm: new Date(),
+      })
+      .where(eq(account.id, accountId))
+    return
+  }
+
   const [evolutionStatus, proxyStatus] = await Promise.all([
     buscarStatusConexao(instanceName),
     buscarProxy(instanceName),
@@ -56,9 +72,25 @@ export async function verificarConexoes(accountIds: number[]): Promise<void> {
   refresh()
 }
 
+/** Associa a conta a uma instância da Evolution (ou limpa, com string vazia) e
+ * já sincroniza o status na sequência. */
+export async function definirInstancia(formData: FormData): Promise<void> {
+  const accountId = Number(formData.get("accountId"))
+  if (!Number.isInteger(accountId)) throw new Error("Conta inválida.")
+  const bruto = formData.get("instanceName")
+  const instanceName = typeof bruto === "string" && bruto.trim() !== "" ? bruto.trim() : null
+
+  await db.update(account).set({ instanceName }).where(eq(account.id, accountId))
+  await verificarSemRefresh(accountId)
+  refresh()
+}
+
 /** Só busca o QR code pro dialog — não grava nada. A conexão de fato só é
  * confirmada quando o operador clica "Já escaneei" e `verificarConexao` roda. */
 export async function gerarQrCode(accountId: number): Promise<string> {
   const instanceName = await instanceNameDaConta(accountId)
+  if (!instanceName) {
+    throw new Error("Associe esta conta a uma instância da Evolution primeiro.")
+  }
   return pedirQrCode(instanceName)
 }

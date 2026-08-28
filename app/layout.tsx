@@ -2,7 +2,6 @@ import { Geist_Mono, Inter } from "next/font/google"
 
 import "./globals.css"
 import { AppSidebar } from "@/components/app-sidebar"
-import { Busca } from "@/components/busca"
 import { Relogio } from "@/components/relogio"
 import { cn } from "@/lib/utils"
 
@@ -34,7 +33,6 @@ export default function RootLayout({
           <div className="flex min-w-0 flex-1 flex-col">
             <header className="bg-card border-border border-b">
               <div className="mx-auto flex w-full max-w-[1400px] items-center justify-end gap-6 px-6 py-3">
-                <Busca />
                 <Relogio />
               </div>
             </header>

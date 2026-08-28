@@ -45,11 +45,18 @@ Sem tabela nova, sem join extra. `statusVerificadoEm` nulo = nunca verificado.
 
 ## Mapeamento conta → instância
 
+> **Corrigido em 2026-08-28.** A premissa abaixo (`nome da instância =
+> número normalizado`) estava errada para o servidor real
+> (`evo.eliborges.com.br`): as instâncias têm rótulo livre (`39fernanda`,
+> `05 - 63998163824`) e o campo `number` da API às vezes diverge do
+> `ownerJid`. Não há como derivar o nome do número. Agora a associação é
+> explícita: coluna `account.instance_name` (nullable), preenchida pelo
+> operador na ficha do aparelho a partir de `GET /instance/fetchInstances`
+> (`listarInstancias()`). `instance_name` nulo → sincronização fica em
+> "desconhecido". `normalizarNumero` continua existindo só para exibição.
+
 `normalizarNumero(numero: string): string` — remove tudo que não é dígito
-(`numero.replace(/\D/g, "")`). O nome da instância é
-`normalizarNumero(chip.numero)` da conta. `chip.numero` no banco pode estar
-formatado ou já só com dígitos — normalizar cobre os dois casos e sempre
-compara maçã com maçã contra o nome da instância na Evolution.
+(`numero.replace(/\D/g, "")`).
 
 ## Cliente Evolution (`lib/evolution.ts`)
 

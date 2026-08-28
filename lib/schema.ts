@@ -63,6 +63,10 @@ export const account = pgTable(
       .references(() => chip.id),
     ativadaEm: date("ativada_em").notNull(),
     status: accountStatus("status").notNull().default("ativa"),
+    /** Nome exato da instância na Evolution. Rótulo livre lá ("39fernanda",
+     * "05 - 63998163824"), nunca derivável do número — por isso é guardado.
+     * `null` = ainda não associada; a sincronização fica em "desconhecido". */
+    instanceName: text("instance_name"),
     evolutionStatus: evolutionStatus("evolution_status").notNull().default("desconhecido"),
     proxyStatus: proxyStatus("proxy_status").notNull().default("sem_conexao"),
     statusVerificadoEm: timestamp("status_verificado_em", { withTimezone: true }),

@@ -246,7 +246,12 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
       <section className="bg-card border-border rounded-xl border p-4">
         <h2 className="mb-3 font-medium">Editar chip</h2>
-        <EditarChip chipId={ficha.chip.id} numero={ficha.chip.numero} operadora={ficha.chip.operadora} />
+        <EditarChip
+          chipId={ficha.chip.id}
+          numero={ficha.chip.numero}
+          operadora={ficha.chip.operadora}
+          origem={ficha.chip.origem}
+        />
         <div className="mt-4">
           <CancelarChip chipId={ficha.chip.id} />
         </div>

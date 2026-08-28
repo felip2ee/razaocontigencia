@@ -9,11 +9,24 @@ import { PageHeader } from "@/components/page-header"
 import { StatusBadge, StatusDeCadastro } from "@/components/status-badge"
 import { VerificarConexao } from "@/components/verificar-conexao"
 import { VerificarTodas } from "@/components/verificar-todas"
+import { ViewToggle } from "@/components/view-toggle"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { listarAparelhosComResumo } from "@/lib/queries"
 import { NOME_DO_SLOT } from "@/lib/slots"
 import { cn, LINK } from "@/lib/utils"
 
 export const dynamic = "force-dynamic"
+
+function estadoDaConta(incidenteAberto: "restricao" | "ban" | null) {
+  return incidenteAberto ? (incidenteAberto === "ban" ? "ban" : "restricao") : "ok"
+}
 
 export default async function Page({
   searchParams,
@@ -23,8 +36,10 @@ export default async function Page({
   const params = await searchParams
   const status = typeof params.status === "string" && params.status !== "" ? params.status : undefined
   const origem = typeof params.origem === "string" && params.origem !== "" ? params.origem : undefined
+  const q = typeof params.q === "string" && params.q !== "" ? params.q : undefined
+  const view = params.view === "lista" ? "lista" : "blocos"
 
-  const aparelhos = await listarAparelhosComResumo({ status, origem })
+  const aparelhos = await listarAparelhosComResumo({ status, origem, q })
   const todasAsContas = aparelhos.flatMap((a) => a.contas.map((c) => c.id))
 
   return (
@@ -35,23 +50,92 @@ export default async function Page({
         acoes={<VerificarTodas accountIds={todasAsContas} />}
       />
 
-      <FiltroLista
-        statusOpcoes={[
-          { valor: "ativo", rotulo: "Ativo" },
-          { valor: "quarentena", rotulo: "Quarentena" },
-          { valor: "aposentado", rotulo: "Aposentado" },
-        ]}
-        statusAtual={status}
-        origemAtual={origem}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <FiltroLista
+          statusOpcoes={[
+            { valor: "ativo", rotulo: "Ativo" },
+            { valor: "quarentena", rotulo: "Quarentena" },
+            { valor: "aposentado", rotulo: "Aposentado" },
+          ]}
+          statusAtual={status}
+          origemAtual={origem}
+          buscaAtual={q}
+          viewAtual={view === "lista" ? "lista" : undefined}
+          buscaPlaceholder="ID ou apelido"
+        />
+        <ViewToggle params={params} atual={view} />
+      </div>
 
       {aparelhos.length === 0 ? (
         <EmptyState
           Icone={Smartphone}
           Ilustracao="/vazio-cadastro.png"
-          titulo="Nenhum aparelho cadastrado"
-          descricao="Cadastre um aparelho para começar."
+          titulo="Nenhum aparelho encontrado"
+          descricao="Ajuste a busca ou os filtros, ou cadastre um aparelho."
         />
+      ) : view === "lista" ? (
+        <div className="bg-card border-border overflow-x-auto rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>Apelido</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Origem</TableHead>
+                <TableHead>Bans</TableHead>
+                <TableHead>Contas</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {aparelhos.map((a) => (
+                <TableRow key={a.id}>
+                  <TableCell className="align-top">
+                    <Link href={`/aparelho/${a.id}`} className={cn(LINK, "font-medium")}>
+                      {a.id}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground align-top">
+                    {a.apelido ?? "Sem apelido"}
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <StatusDeCadastro valor={a.status} />
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <OrigemBadge origem={a.origem} />
+                    {a.origem === "propria" && (
+                      <span className="text-muted-foreground text-xs">Própria</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="align-top tabular-nums">{a.totalBans}</TableCell>
+                  <TableCell className="align-top">
+                    {a.contas.length === 0 ? (
+                      <span className="text-muted-foreground">Nenhuma conta ativa</span>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {a.contas.map((c) => (
+                          <div key={c.id} className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-medium tabular-nums">{c.numero}</span>
+                            <span className="text-muted-foreground text-xs">{c.chipId}</span>
+                            <span className="text-muted-foreground text-xs">
+                              {NOME_DO_SLOT[c.slot]}
+                            </span>
+                            <StatusBadge estado={estadoDaConta(c.incidenteAberto)} />
+                            <ConexaoBadge
+                              status={c.evolutionStatus}
+                              proxy={c.proxyStatus}
+                              statusVerificadoEm={c.statusVerificadoEm}
+                            />
+                            <VerificarConexao accountId={c.id} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {aparelhos.map((a) => (
@@ -95,9 +179,7 @@ export default async function Page({
                           {NOME_DO_SLOT[c.slot]}
                         </span>
                       </div>
-                      <StatusBadge
-                        estado={c.incidenteAberto ? (c.incidenteAberto === "ban" ? "ban" : "restricao") : "ok"}
-                      />
+                      <StatusBadge estado={estadoDaConta(c.incidenteAberto)} />
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <ConexaoBadge
                           status={c.evolutionStatus}

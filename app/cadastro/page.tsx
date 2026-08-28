@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ativarConta, criarAparelho, criarChip } from "@/lib/actions"
 import { db } from "@/lib/db"
+import { listarInstancias } from "@/lib/evolution"
 import { chipsLivres } from "@/lib/queries"
 import { NOME_DO_SLOT } from "@/lib/slots"
 import { device } from "@/lib/schema"
@@ -20,6 +21,7 @@ export default async function Page() {
     .where(eq(device.status, "ativo"))
     .orderBy(asc(device.id))
   const livres = await chipsLivres()
+  const instancias = await listarInstancias()
 
   return (
     <div className="flex flex-col gap-6">
@@ -155,6 +157,28 @@ export default async function Page() {
             <div className="grid gap-1.5">
               <Label htmlFor="co-data">Ativada em</Label>
               <Input id="co-data" name="ativadaEm" type="date" required />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="co-instancia">Instância na Evolution</Label>
+              <select
+                id="co-instancia"
+                name="instanceName"
+                defaultValue=""
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              >
+                <option value="">— associar depois —</option>
+                {instancias.map((i) => (
+                  <option key={i.name} value={i.name}>
+                    {i.name}
+                    {i.numero ? ` — ${i.numero}` : ""} ({i.status})
+                  </option>
+                ))}
+              </select>
+              {instancias.length === 0 && (
+                <p className="text-muted-foreground text-xs">
+                  Nenhuma instância retornada pela Evolution. Confira a URL e a API key.
+                </p>
+              )}
             </div>
             <Button type="submit">Ativar conta</Button>
           </FormAcao>
