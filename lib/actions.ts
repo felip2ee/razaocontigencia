@@ -115,10 +115,11 @@ export async function ativarConta(
 ): Promise<EstadoDoForm> {
   return comMensagem(async () => {
     const chipId = texto(formData, "chipId")
+    const [deviceId, slot] = texto(formData, "destino").split("|")
     await db.transaction(async (tx) => {
       await tx.insert(account).values({
-        deviceId: texto(formData, "deviceId"),
-        slot: texto(formData, "slot") as "wa1" | "wa2" | "business",
+        deviceId,
+        slot: slot as "wa1" | "wa2" | "business",
         chipId,
         ativadaEm: texto(formData, "ativadaEm"),
         instanceName: textoOpcional(formData, "instanceName"),
@@ -379,5 +380,13 @@ export async function cancelarConta(formData: FormData) {
       await tx.update(chip).set({ status: "novo" }).where(eq(chip.id, conta.chipId))
     }
   })
+  refresh()
+}
+
+export async function reativarChip(formData: FormData) {
+  await db
+    .update(chip)
+    .set({ status: "novo" })
+    .where(eq(chip.id, texto(formData, "chipId")))
   refresh()
 }

@@ -3,6 +3,7 @@ import { alias } from "drizzle-orm/pg-core"
 
 import { db } from "./db.ts"
 import { account, chip, device, incident, warmupAction, warmupTask } from "./schema.ts"
+import { SLOTS } from "./slots.ts"
 import type { AcaoCatalogo, ContaParaSorteio, Par } from "./warmup.ts"
 
 export type ContaNaLista = {
@@ -190,6 +191,7 @@ export type FichaChip = {
   chip: typeof chip.$inferSelect
   aparelhoDaBandeja: typeof device.$inferSelect | null
   conta: (typeof account.$inferSelect) | null
+  numeroPerdido: boolean
 }
 
 export async function fichaDoChip(id: string): Promise<FichaChip | null> {
@@ -202,7 +204,22 @@ export async function fichaDoChip(id: string): Promise<FichaChip | null> {
 
   const [aConta] = await db.select().from(account).where(eq(account.chipId, id))
 
-  return { chip: oChip, aparelhoDaBandeja: aparelho ?? null, conta: aConta ?? null }
+  let numeroPerdido = false
+  if (aConta) {
+    const [perdido] = await db
+      .select({ id: incident.id })
+      .from(incident)
+      .where(
+        and(
+          eq(incident.accountId, aConta.id),
+          eq(incident.tipo, "ban"),
+          eq(incident.resultado, "perdida"),
+        ),
+      )
+    numeroPerdido = Boolean(perdido)
+  }
+
+  return { chip: oChip, aparelhoDaBandeja: aparelho ?? null, conta: aConta ?? null, numeroPerdido }
 }
 
 export type TarefaDoDia = {
@@ -446,4 +463,32 @@ export async function listarChipsComResumo(filtro?: {
     posicao: c.posicao,
     conta: contas.find((a) => a.chipId === c.id) ?? null,
   }))
+}
+
+export type SlotLivre = { deviceId: string; apelido: string | null; slot: string }
+
+/** Toda combinação aparelho+slot sem conta ativa — o que "Ativar conta"
+ * pode de fato oferecer. Aparelho com os 3 slots ocupados simplesmente não
+ * contribui nenhuma linha, então some da lista sozinho. */
+export async function slotsLivres(): Promise<SlotLivre[]> {
+  const [devices, ocupados] = await Promise.all([
+    db
+      .select({ id: device.id, apelido: device.apelido })
+      .from(device)
+      .where(eq(device.status, "ativo"))
+      .orderBy(asc(device.id)),
+    db
+      .select({ deviceId: account.deviceId, slot: account.slot })
+      .from(account)
+      .where(eq(account.status, "ativa")),
+  ])
+
+  const livres: SlotLivre[] = []
+  for (const d of devices) {
+    for (const slot of SLOTS) {
+      const ocupado = ocupados.some((o) => o.deviceId === d.id && o.slot === slot)
+      if (!ocupado) livres.push({ deviceId: d.id, apelido: d.apelido, slot })
+    }
+  }
+  return livres
 }
