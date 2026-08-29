@@ -10,28 +10,40 @@ import {
   buscarStatusConexao,
   listarInstancias,
   pedirQrCode,
+  type ServidorEvolution,
 } from "./evolution.ts"
-import { account, chip } from "./schema.ts"
+import { servidoresEvolutionAtivos } from "./queries.ts"
+import { account, chip, evolutionServer } from "./schema.ts"
 
-/** Nome da instância na Evolution vem da coluna `account.instance_name`, que o
- * operador associa pela ficha do aparelho. É rótulo livre lá, nunca derivável
- * do número — por isso é guardado e não calculado. `null` = ainda não
- * associada. */
-async function instanceNameDaConta(accountId: number): Promise<string | null> {
+/**
+ * Servidor + nome da instância de uma conta. `null` se faltar servidor ou
+ * instância, ou se o servidor estiver desativado. Lança só quando a conta
+ * em si não existe.
+ */
+async function contextoDaConta(
+  accountId: number,
+): Promise<{ servidor: ServidorEvolution; instanceName: string } | null> {
   const [linha] = await db
-    .select({ instanceName: account.instanceName })
+    .select({
+      instanceName: account.instanceName,
+      url: evolutionServer.url,
+      apiKey: evolutionServer.apiKey,
+      ativo: evolutionServer.ativo,
+    })
     .from(account)
+    .leftJoin(evolutionServer, eq(evolutionServer.id, account.evolutionServerId))
     .where(eq(account.id, accountId))
   if (!linha) throw new Error("Conta não encontrada.")
-  return linha.instanceName
+  if (!linha.instanceName || !linha.url || !linha.apiKey || !linha.ativo) return null
+  return { servidor: { url: linha.url, apiKey: linha.apiKey }, instanceName: linha.instanceName }
 }
 
 async function verificarSemRefresh(accountId: number): Promise<void> {
-  const instanceName = await instanceNameDaConta(accountId)
+  const ctx = await contextoDaConta(accountId)
 
-  // Sem instância associada não há o que consultar: registra "desconhecido" e
-  // carimba a verificação pra a ficha mostrar que já tentou.
-  if (!instanceName) {
+  // Sem servidor/instância associada não há o que consultar: registra
+  // "desconhecido" e carimba a verificação pra a ficha mostrar que já tentou.
+  if (!ctx) {
     await db
       .update(account)
       .set({
@@ -44,8 +56,8 @@ async function verificarSemRefresh(accountId: number): Promise<void> {
   }
 
   const [evolutionStatus, proxyStatus] = await Promise.all([
-    buscarStatusConexao(instanceName),
-    buscarProxy(instanceName),
+    buscarStatusConexao(ctx.servidor, ctx.instanceName),
+    buscarProxy(ctx.servidor, ctx.instanceName),
   ])
 
   await db
@@ -65,9 +77,9 @@ const TAMANHO_LOTE = 8
 
 /**
  * Antes de verificar em lote, tenta associar sozinho as contas sem instância:
- * busca a lista da Evolution uma vez e casa pelo número do chip. Só grava
- * quando o match é único — 0 ou 2+ instâncias e a conta fica pro operador
- * resolver na ficha.
+ * busca a lista de todos os servidores ativos uma vez e casa pelo número do
+ * chip. Só grava quando o match é único — 0 ou 2+ instâncias e a conta fica
+ * pro operador resolver na ficha.
  */
 async function autoAssociarInstancias(accountIds: number[]): Promise<void> {
   if (accountIds.length === 0) return
@@ -80,13 +92,19 @@ async function autoAssociarInstancias(accountIds: number[]): Promise<void> {
 
   if (semInstancia.length === 0) return
 
-  const instancias = await listarInstancias()
+  const servidores = await servidoresEvolutionAtivos()
+  if (servidores.length === 0) return
+
+  const instancias = await listarInstancias(servidores)
   if (instancias.length === 0) return
 
   for (const conta of semInstancia) {
-    const nome = acharInstancia(conta.numero, instancias)
-    if (nome) {
-      await db.update(account).set({ instanceName: nome }).where(eq(account.id, conta.id))
+    const achado = acharInstancia(conta.numero, instancias)
+    if (achado) {
+      await db
+        .update(account)
+        .set({ evolutionServerId: achado.serverId, instanceName: achado.name })
+        .where(eq(account.id, conta.id))
     }
   }
 }
@@ -108,15 +126,39 @@ export async function verificarConexoes(accountIds: number[]): Promise<void> {
   refresh()
 }
 
-/** Associa a conta a uma instância da Evolution (ou limpa, com string vazia) e
- * já sincroniza o status na sequência. */
+/** Associa a conta a um servidor + instância da Evolution (ou limpa, com
+ * string vazia/ inválida) e já sincroniza o status na sequência. O valor vem
+ * como `"<serverId>::<name>"` — split no primeiro `::` porque o nome pode
+ * conter `::`. */
 export async function definirInstancia(formData: FormData): Promise<void> {
   const accountId = Number(formData.get("accountId"))
   if (!Number.isInteger(accountId)) throw new Error("Conta inválida.")
-  const bruto = formData.get("instanceName")
-  const instanceName = typeof bruto === "string" && bruto.trim() !== "" ? bruto.trim() : null
 
-  await db.update(account).set({ instanceName }).where(eq(account.id, accountId))
+  const bruto = formData.get("instancia")
+  const valor = typeof bruto === "string" ? bruto.trim() : ""
+  const sep = valor.indexOf("::")
+
+  let evolutionServerId: number | null = null
+  let instanceName: string | null = null
+  if (sep > 0) {
+    const id = Number(valor.slice(0, sep))
+    const nome = valor.slice(sep + 2)
+    if (Number.isInteger(id) && nome) {
+      const [existe] = await db
+        .select({ id: evolutionServer.id })
+        .from(evolutionServer)
+        .where(eq(evolutionServer.id, id))
+      if (existe) {
+        evolutionServerId = id
+        instanceName = nome
+      }
+    }
+  }
+
+  await db
+    .update(account)
+    .set({ evolutionServerId, instanceName })
+    .where(eq(account.id, accountId))
   await verificarSemRefresh(accountId)
   refresh()
 }
@@ -124,9 +166,9 @@ export async function definirInstancia(formData: FormData): Promise<void> {
 /** Só busca o QR code pro dialog — não grava nada. A conexão de fato só é
  * confirmada quando o operador clica "Já escaneei" e `verificarConexao` roda. */
 export async function gerarQrCode(accountId: number): Promise<string> {
-  const instanceName = await instanceNameDaConta(accountId)
-  if (!instanceName) {
-    throw new Error("Associe esta conta a uma instância da Evolution primeiro.")
+  const ctx = await contextoDaConta(accountId)
+  if (!ctx) {
+    throw new Error("Associe esta conta a um servidor e uma instância da Evolution primeiro.")
   }
-  return pedirQrCode(instanceName)
+  return pedirQrCode(ctx.servidor, ctx.instanceName)
 }
