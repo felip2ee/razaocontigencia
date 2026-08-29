@@ -28,7 +28,7 @@ import {
 import { mudarStatusDoAparelho } from "@/lib/actions"
 import { db } from "@/lib/db"
 import { listarInstancias } from "@/lib/evolution"
-import { fichaDoAparelho } from "@/lib/queries"
+import { fichaDoAparelho, servidoresEvolutionAtivos } from "@/lib/queries"
 import { device } from "@/lib/schema"
 import { NOME_DO_SLOT, SLOTS } from "@/lib/slots"
 import { cn, LINK } from "@/lib/utils"
@@ -49,7 +49,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     .where(or(eq(device.status, "ativo"), eq(device.id, id)))
     .orderBy(asc(device.id))
 
-  const instancias = await listarInstancias()
+  const servidores = await servidoresEvolutionAtivos()
+  const instancias = await listarInstancias(servidores)
 
   const hoje = new Date()
 
@@ -218,7 +219,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               <div className="border-border flex flex-wrap items-center gap-2 border-t pt-2">
                 <DefinirInstancia
                   accountId={c.id}
-                  instanceAtual={c.instanceName}
+                  instanciaAtual={
+                    c.evolutionServerId && c.instanceName
+                      ? { serverId: c.evolutionServerId, nome: c.instanceName }
+                      : null
+                  }
                   instancias={instancias}
                 />
               </div>

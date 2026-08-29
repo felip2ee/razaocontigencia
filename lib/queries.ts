@@ -134,6 +134,8 @@ export type FichaAparelho = {
   contas: (ContaNaLista & {
     status: "ativa" | "aposentada"
     instanceName: string | null
+    evolutionServerId: number | null
+    evolutionServerNome: string | null
     incidenteAberto: ContaComIncidente | null
   })[]
   historico: (typeof incident.$inferSelect & { slot: string; chipId: string })[]
@@ -150,9 +152,16 @@ export async function fichaDoAparelho(id: string): Promise<FichaAparelho | null>
     .where(and(eq(chip.bandejaDeviceId, id), eq(chip.local, "bandeja")))
 
   const contas = await db
-    .select({ ...CAMPOS_DA_CONTA, status: account.status, instanceName: account.instanceName })
+    .select({
+      ...CAMPOS_DA_CONTA,
+      status: account.status,
+      instanceName: account.instanceName,
+      evolutionServerId: account.evolutionServerId,
+      evolutionServerNome: evolutionServer.nome,
+    })
     .from(account)
     .innerJoin(chip, eq(chip.id, account.chipId))
+    .leftJoin(evolutionServer, eq(evolutionServer.id, account.evolutionServerId))
     .where(and(eq(account.deviceId, id), eq(account.status, "ativa")))
     .orderBy(asc(account.slot))
 

@@ -54,34 +54,47 @@ export function CorrigirAparelho({
 
 export function DefinirInstancia({
   accountId,
-  instanceAtual,
+  instanciaAtual,
   instancias,
 }: {
   accountId: number
-  instanceAtual: string | null
+  instanciaAtual: { serverId: number; nome: string } | null
   instancias: InstanciaEvolution[]
 }) {
-  // A instância salva pode não estar mais na lista da Evolution (renomeada,
-  // apagada). Mantém a opção visível pra não sumir silenciosamente.
-  const faltando =
-    instanceAtual && !instancias.some((i) => i.name === instanceAtual) ? instanceAtual : null
+  const servidores = [...new Map(instancias.map((i) => [i.serverId, i.serverNome])).entries()]
+  const valorAtual = instanciaAtual
+    ? `${instanciaAtual.serverId}::${instanciaAtual.nome}`
+    : ""
+  const naLista = instancias.some(
+    (i) => `${i.serverId}::${i.name}` === valorAtual,
+  )
 
   return (
     <form action={definirInstancia} className="flex flex-wrap items-center gap-2">
       <input type="hidden" name="accountId" value={accountId} />
       <select
-        name="instanceName"
-        defaultValue={instanceAtual ?? ""}
+        name="instancia"
+        defaultValue={valorAtual}
         className="border-input bg-background h-8 rounded-md border px-2 text-sm"
         aria-label="Instância na Evolution"
       >
         <option value="">— sem instância —</option>
-        {faltando && <option value={faltando}>{faltando} (não está mais na Evolution)</option>}
-        {instancias.map((i) => (
-          <option key={i.name} value={i.name}>
-            {i.name}
-            {i.numero ? ` — ${i.numero}` : ""} ({i.status})
+        {instanciaAtual && !naLista && (
+          <option value={valorAtual}>
+            {instanciaAtual.nome} (não encontrada no servidor)
           </option>
+        )}
+        {servidores.map(([serverId, serverNome]) => (
+          <optgroup key={serverId} label={serverNome}>
+            {instancias
+              .filter((i) => i.serverId === serverId)
+              .map((i) => (
+                <option key={`${i.serverId}::${i.name}`} value={`${i.serverId}::${i.name}`}>
+                  {i.name}
+                  {i.numero ? ` — ${i.numero}` : ""} ({i.status})
+                </option>
+              ))}
+          </optgroup>
         ))}
       </select>
       <Button type="submit" size="sm" variant="outline">
