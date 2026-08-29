@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { ativarConta, criarAparelho, criarChip } from "@/lib/actions"
 import { db } from "@/lib/db"
 import { listarInstancias } from "@/lib/evolution"
-import { chipsLivres } from "@/lib/queries"
+import { chipsLivres, servidoresEvolutionAtivos } from "@/lib/queries"
 import { NOME_DO_SLOT } from "@/lib/slots"
 import { device } from "@/lib/schema"
 
@@ -21,7 +21,8 @@ export default async function Page() {
     .where(eq(device.status, "ativo"))
     .orderBy(asc(device.id))
   const livres = await chipsLivres()
-  const instancias = await listarInstancias()
+  const servidores = await servidoresEvolutionAtivos()
+  const instancias = await listarInstancias(servidores)
 
   return (
     <div className="flex flex-col gap-6">
@@ -162,21 +163,27 @@ export default async function Page() {
               <Label htmlFor="co-instancia">Instância na Evolution</Label>
               <select
                 id="co-instancia"
-                name="instanceName"
+                name="instancia"
                 defaultValue=""
                 className="border-input bg-background h-9 rounded-md border px-3 text-sm"
               >
                 <option value="">— associar depois —</option>
-                {instancias.map((i) => (
-                  <option key={i.name} value={i.name}>
-                    {i.name}
-                    {i.numero ? ` — ${i.numero}` : ""} ({i.status})
-                  </option>
+                {servidores.map((s) => (
+                  <optgroup key={s.id} label={s.nome}>
+                    {instancias
+                      .filter((i) => i.serverId === s.id)
+                      .map((i) => (
+                        <option key={`${i.serverId}::${i.name}`} value={`${i.serverId}::${i.name}`}>
+                          {i.name}
+                          {i.numero ? ` — ${i.numero}` : ""} ({i.status})
+                        </option>
+                      ))}
+                  </optgroup>
                 ))}
               </select>
-              {instancias.length === 0 && (
+              {servidores.length === 0 && (
                 <p className="text-muted-foreground text-xs">
-                  Nenhuma instância retornada pela Evolution. Confira a URL e a API key.
+                  Cadastre um servidor Evolution em /servidores primeiro.
                 </p>
               )}
             </div>

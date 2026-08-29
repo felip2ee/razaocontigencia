@@ -124,13 +124,29 @@ export async function ativarConta(
 ): Promise<EstadoDoForm> {
   return comMensagem(async () => {
     const chipId = texto(formData, "chipId")
+    const instancia = textoOpcional(formData, "instancia")
+    let evolutionServerId: number | null = null
+    let instanceName: string | null = null
+    if (instancia) {
+      const sep = instancia.indexOf("::")
+      if (sep > 0) {
+        const id = Number(instancia.slice(0, sep))
+        const nome = instancia.slice(sep + 2)
+        if (Number.isInteger(id) && nome) {
+          evolutionServerId = id
+          instanceName = nome
+        }
+      }
+    }
+
     await db.transaction(async (tx) => {
       await tx.insert(account).values({
         deviceId: texto(formData, "deviceId"),
         slot: texto(formData, "slot") as "wa1" | "wa2" | "business",
         chipId,
         ativadaEm: texto(formData, "ativadaEm"),
-        instanceName: textoOpcional(formData, "instanceName"),
+        evolutionServerId,
+        instanceName,
       })
       await tx.update(chip).set({ status: "em_uso" }).where(eq(chip.id, chipId))
     })
