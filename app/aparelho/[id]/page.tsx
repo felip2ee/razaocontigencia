@@ -50,7 +50,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     .orderBy(asc(device.id))
 
   const servidores = await servidoresEvolutionAtivos()
-  const instancias = await listarInstancias(servidores)
+  const { instancias, falharam } = await listarInstancias(servidores)
 
   const hoje = new Date()
 
@@ -216,16 +216,24 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                   <VerificarConexao accountId={c.id} />
                 )}
               </div>
-              <div className="border-border flex flex-wrap items-center gap-2 border-t pt-2">
-                <DefinirInstancia
-                  accountId={c.id}
-                  instanciaAtual={
-                    c.evolutionServerId && c.instanceName
-                      ? { serverId: c.evolutionServerId, nome: c.instanceName }
-                      : null
-                  }
-                  instancias={instancias}
-                />
+              <div className="border-border flex flex-col gap-1 border-t pt-2">
+                {c.evolutionServerNome && c.instanceName && (
+                  <div className="text-muted-foreground text-xs">
+                    {c.evolutionServerNome} · {c.instanceName}
+                  </div>
+                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <DefinirInstancia
+                    accountId={c.id}
+                    instanciaAtual={
+                      c.evolutionServerId && c.instanceName
+                        ? { serverId: c.evolutionServerId, nome: c.instanceName }
+                        : null
+                    }
+                    instancias={instancias}
+                    falharam={falharam}
+                  />
+                </div>
               </div>
               <div className="border-border flex flex-wrap items-center gap-2 border-t pt-2">
                 <CorrigirAparelho

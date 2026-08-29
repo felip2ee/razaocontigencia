@@ -88,7 +88,7 @@ test("listarInstancias: junta instâncias de dois servidores, cada uma com seu s
     throw new Error(`não mockado: ${u.href}`)
   }) as typeof fetch
 
-  const r = await listarInstancias([
+  const { instancias: r } = await listarInstancias([
     { id: 1, nome: "Evo A", url: "http://a.test", apiKey: "k1" },
     { id: 2, nome: "Evo B", url: "http://b.test", apiKey: "k2" },
   ])
@@ -112,7 +112,7 @@ test("listarInstancias: servidor que falha é ignorado, o outro entra", async ()
     throw new Error("servidor caiu")
   }) as typeof fetch
 
-  const r = await listarInstancias([
+  const { instancias: r, falharam } = await listarInstancias([
     { id: 1, nome: "OK", url: "http://ok.test", apiKey: "k" },
     { id: 2, nome: "Morto", url: "http://morto.test", apiKey: "k" },
   ])
@@ -120,6 +120,7 @@ test("listarInstancias: servidor que falha é ignorado, o outro entra", async ()
   assert.equal(r.length, 1)
   assert.equal(r[0].name, "viva")
   assert.equal(r[0].serverId, 1)
+  assert.ok(falharam.includes("Morto"))
 })
 
 test("buscarStatusConexao: open vira aberta", async () => {

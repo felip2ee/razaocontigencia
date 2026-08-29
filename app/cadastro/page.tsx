@@ -22,7 +22,7 @@ export default async function Page() {
     .orderBy(asc(device.id))
   const livres = await chipsLivres()
   const servidores = await servidoresEvolutionAtivos()
-  const instancias = await listarInstancias(servidores)
+  const { instancias, falharam } = await listarInstancias(servidores)
 
   return (
     <div className="flex flex-col gap-6">
@@ -184,6 +184,11 @@ export default async function Page() {
               {servidores.length === 0 && (
                 <p className="text-muted-foreground text-xs">
                   Cadastre um servidor Evolution em /servidores primeiro.
+                </p>
+              )}
+              {falharam.length > 0 && (
+                <p className="text-muted-foreground text-xs">
+                  {falharam.join(", ")} não respondeu(ram).
                 </p>
               )}
             </div>

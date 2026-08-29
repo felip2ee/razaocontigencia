@@ -1,6 +1,6 @@
 "use server"
 
-import { and, eq, inArray, isNull } from "drizzle-orm"
+import { and, eq, inArray, isNull, or } from "drizzle-orm"
 import { refresh } from "next/cache"
 
 import { db } from "./db.ts"
@@ -88,14 +88,25 @@ async function autoAssociarInstancias(accountIds: number[]): Promise<void> {
     .select({ id: account.id, numero: chip.numero })
     .from(account)
     .innerJoin(chip, eq(chip.id, account.chipId))
-    .where(and(inArray(account.id, accountIds), isNull(account.instanceName)))
+    .where(
+      and(
+        inArray(account.id, accountIds),
+        or(isNull(account.instanceName), isNull(account.evolutionServerId)),
+      ),
+    )
 
   if (semInstancia.length === 0) return
 
   const servidores = await servidoresEvolutionAtivos()
   if (servidores.length === 0) return
 
-  const instancias = await listarInstancias(servidores)
+  const { instancias, falharam } = await listarInstancias(servidores)
+  if (falharam.length > 0) {
+    console.warn(
+      `autoAssociarInstancias: pool incompleto, servidores fora: ${falharam.join(", ")} — nada gravado`,
+    )
+    return
+  }
   if (instancias.length === 0) return
 
   for (const conta of semInstancia) {

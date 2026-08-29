@@ -20,6 +20,7 @@ async function chamarEvolution<T>(
     const resposta = await fetch(`${base}${caminho}`, {
       ...init,
       headers: { apikey: servidor.apiKey, ...init?.headers },
+      signal: AbortSignal.timeout(8000),
     })
     if (!resposta.ok) return null
     return (await resposta.json()) as T
@@ -86,13 +87,13 @@ export function acharInstancia(
  * operador a reconhecer qual é qual. */
 export async function listarInstancias(
   servidores: ServidorComId[],
-): Promise<InstanciaEvolution[]> {
+): Promise<{ instancias: InstanciaEvolution[]; falharam: string[] }> {
   const porServidor = await Promise.allSettled(
     servidores.map(async (s) => {
       const dados = await chamarEvolution<InstanciaApi[]>(s, `/instance/fetchInstances`)
       if (!Array.isArray(dados)) {
         console.warn(`listarInstancias: ${s.nome} não devolveu lista`)
-        return []
+        throw new Error(s.nome)
       }
       return dados
         .filter((i): i is InstanciaApi & { name: string } => typeof i.name === "string")
@@ -111,9 +112,15 @@ export async function listarInstancias(
     }),
   )
 
-  return porServidor
+  const falharam = servidores
+    .filter((_, i) => porServidor[i].status === "rejected")
+    .map((s) => s.nome)
+
+  const instancias = porServidor
     .flatMap((r) => (r.status === "fulfilled" ? r.value : []))
     .sort((a, b) => a.serverNome.localeCompare(b.serverNome) || a.name.localeCompare(b.name))
+
+  return { instancias, falharam }
 }
 
 type ConnectionStateApi = { instance?: { state?: string } }

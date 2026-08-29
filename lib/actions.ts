@@ -125,21 +125,34 @@ export async function ativarConta(
   return comMensagem(async () => {
     const chipId = texto(formData, "chipId")
     const instancia = textoOpcional(formData, "instancia")
-    let evolutionServerId: number | null = null
-    let instanceName: string | null = null
+    let idServidor: number | null = null
+    let nomeInstancia: string | null = null
     if (instancia) {
       const sep = instancia.indexOf("::")
       if (sep > 0) {
         const id = Number(instancia.slice(0, sep))
         const nome = instancia.slice(sep + 2)
         if (Number.isInteger(id) && nome) {
-          evolutionServerId = id
-          instanceName = nome
+          idServidor = id
+          nomeInstancia = nome
         }
       }
     }
 
     await db.transaction(async (tx) => {
+      let evolutionServerId: number | null = null
+      let instanceName: string | null = null
+      if (idServidor !== null && nomeInstancia) {
+        const [existe] = await tx
+          .select({ id: evolutionServer.id })
+          .from(evolutionServer)
+          .where(eq(evolutionServer.id, idServidor))
+        if (existe) {
+          evolutionServerId = idServidor
+          instanceName = nomeInstancia
+        }
+      }
+
       await tx.insert(account).values({
         deviceId: texto(formData, "deviceId"),
         slot: texto(formData, "slot") as "wa1" | "wa2" | "business",

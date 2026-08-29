@@ -56,10 +56,12 @@ export function DefinirInstancia({
   accountId,
   instanciaAtual,
   instancias,
+  falharam,
 }: {
   accountId: number
   instanciaAtual: { serverId: number; nome: string } | null
   instancias: InstanciaEvolution[]
+  falharam?: string[]
 }) {
   const servidores = [...new Map(instancias.map((i) => [i.serverId, i.serverNome])).entries()]
   const valorAtual = instanciaAtual
@@ -100,6 +102,11 @@ export function DefinirInstancia({
       <Button type="submit" size="sm" variant="outline">
         Salvar instância
       </Button>
+      {falharam && falharam.length > 0 && (
+        <span className="text-muted-foreground text-xs">
+          {falharam.join(", ")} não respondeu(ram).
+        </span>
+      )}
     </form>
   )
 }
