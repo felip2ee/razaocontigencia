@@ -4,7 +4,7 @@ import { and, eq, isNull, sql } from "drizzle-orm"
 import { refresh } from "next/cache"
 
 import { db } from "./db.ts"
-import { account, chip, device, incident, warmupTask } from "./schema.ts"
+import { account, chip, device, evolutionServer, incident, warmupTask } from "./schema.ts"
 import { contasParaSorteio, listarCatalogo, paresRecentes } from "./queries.ts"
 import { gerarTarefasDoDia, hojeISO } from "./warmup.ts"
 
@@ -22,6 +22,7 @@ const MENSAGEM_DA_CONSTRAINT: Record<string, string> = {
   account_chip_ativo: "Esse chip já está em uso por outra conta ativa.",
   incident_aberto_unico: "Essa conta já tem um incidente aberto. Encerre o atual antes.",
   warmup_task_unica: "Essa tarefa já foi sorteada hoje para essa conta.",
+  evolution_server_url: "Já existe um servidor com essa URL.",
 }
 
 /** O erro do pg pode vir embrulhado pelo drizzle; a constraint fica na cadeia de causas. */
@@ -76,6 +77,14 @@ function texto(formData: FormData, campo: string): string {
 function textoOpcional(formData: FormData, campo: string): string | null {
   const valor = formData.get(campo)
   return typeof valor === "string" && valor.trim() !== "" ? valor.trim() : null
+}
+
+function urlDeServidor(formData: FormData): string {
+  const bruta = texto(formData, "url").replace(/\/$/, "")
+  if (!/^https?:\/\//i.test(bruta)) {
+    throw new ErroDeValidacao("A URL deve começar com http:// ou https://")
+  }
+  return bruta
 }
 
 export async function criarAparelho(
@@ -380,4 +389,71 @@ export async function cancelarConta(formData: FormData) {
     }
   })
   refresh()
+}
+
+export async function criarServidorEvolution(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    await db.insert(evolutionServer).values({
+      nome: texto(formData, "nome"),
+      url: urlDeServidor(formData),
+      apiKey: texto(formData, "apiKey"),
+    })
+    return { aviso: "Servidor cadastrado." }
+  })
+}
+
+export async function editarServidorEvolution(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    const novaKey = textoOpcional(formData, "apiKey")
+    await db
+      .update(evolutionServer)
+      .set({
+        nome: texto(formData, "nome"),
+        url: urlDeServidor(formData),
+        ...(novaKey ? { apiKey: novaKey } : {}),
+      })
+      .where(eq(evolutionServer.id, Number(texto(formData, "serverId"))))
+    return { aviso: "Servidor atualizado." }
+  })
+}
+
+export async function alternarServidorEvolution(formData: FormData) {
+  const id = Number(texto(formData, "serverId"))
+  const [atual] = await db
+    .select({ ativo: evolutionServer.ativo })
+    .from(evolutionServer)
+    .where(eq(evolutionServer.id, id))
+  if (atual) {
+    await db
+      .update(evolutionServer)
+      .set({ ativo: !atual.ativo })
+      .where(eq(evolutionServer.id, id))
+  }
+  refresh()
+}
+
+export async function removerServidorEvolution(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    const id = Number(texto(formData, "serverId"))
+    const [{ n }] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(account)
+      .where(eq(account.evolutionServerId, id))
+    if (n > 0) {
+      throw new ErroDeValidacao(
+        `${n} conta(s) usam este servidor. Desative em vez de remover.`,
+      )
+    }
+    await db.delete(evolutionServer).where(eq(evolutionServer.id, id))
+    return { aviso: "Servidor removido." }
+  })
 }
