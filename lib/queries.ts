@@ -2,8 +2,9 @@ import { and, asc, count, desc, eq, gte, ilike, isNotNull, isNull, max, or, sql 
 import { alias } from "drizzle-orm/pg-core"
 
 import { db } from "./db.ts"
-import { account, chip, device, incident, warmupAction, warmupTask } from "./schema.ts"
+import { account, chip, device, incident, warmupAction, warmupTask, evolutionServer } from "./schema.ts"
 import type { AcaoCatalogo, ContaParaSorteio, Par } from "./warmup.ts"
+import type { ServidorComId } from "./evolution.ts"
 
 export type ContaNaLista = {
   id: number
@@ -446,4 +447,47 @@ export async function listarChipsComResumo(filtro?: {
     posicao: c.posicao,
     conta: contas.find((a) => a.chipId === c.id) ?? null,
   }))
+}
+
+export type ServidorNaLista = {
+  id: number
+  nome: string
+  url: string
+  apiKeyMascara: string
+  ativo: boolean
+  contasVinculadas: number
+}
+
+function mascararKey(apiKey: string): string {
+  return apiKey.length >= 4 ? `••••${apiKey.slice(-4)}` : "••••"
+}
+
+/** Lista pra tela /servidores: key mascarada e contagem de contas usando cada um. */
+export async function listarServidoresEvolution(): Promise<ServidorNaLista[]> {
+  const [servidores, contagem] = await Promise.all([
+    db.select().from(evolutionServer).orderBy(asc(evolutionServer.nome)),
+    db
+      .select({ serverId: account.evolutionServerId, n: count() })
+      .from(account)
+      .groupBy(account.evolutionServerId),
+  ])
+
+  return servidores.map((s) => ({
+    id: s.id,
+    nome: s.nome,
+    url: s.url,
+    apiKeyMascara: mascararKey(s.apiKey),
+    ativo: s.ativo,
+    contasVinculadas: contagem.find((c) => c.serverId === s.id)?.n ?? 0,
+  }))
+}
+
+/** Servidores ativos com a key em claro — uso interno de actions/sync. */
+export async function servidoresEvolutionAtivos(): Promise<ServidorComId[]> {
+  const linhas = await db
+    .select()
+    .from(evolutionServer)
+    .where(eq(evolutionServer.ativo, true))
+    .orderBy(asc(evolutionServer.nome))
+  return linhas.map((s) => ({ id: s.id, nome: s.nome, url: s.url, apiKey: s.apiKey }))
 }
