@@ -5,19 +5,21 @@ export function normalizarNumero(numero: string): string {
   return numero.replace(/\D/g, "")
 }
 
-function baseUrl(): string {
-  const url = process.env.EVOLUTION_API_URL
-  if (!url) throw new Error("EVOLUTION_API_URL não configurada")
-  return url.replace(/\/$/, "")
-}
+export type ServidorEvolution = { url: string; apiKey: string }
+export type ServidorComId = ServidorEvolution & { id: number; nome: string }
 
-/** Chamada crua contra a Evolution API. Erro de rede ou resposta não-ok vira `null`,
+/** Chamada crua contra uma Evolution. Erro de rede ou resposta não-ok → `null`,
  * nunca lança — quem chama decide o que `null` significa (desconhecido, sem proxy, etc). */
-async function chamarEvolution<T>(caminho: string, init?: RequestInit): Promise<T | null> {
+async function chamarEvolution<T>(
+  servidor: ServidorEvolution,
+  caminho: string,
+  init?: RequestInit,
+): Promise<T | null> {
   try {
-    const resposta = await fetch(`${baseUrl()}${caminho}`, {
+    const base = servidor.url.replace(/\/$/, "")
+    const resposta = await fetch(`${base}${caminho}`, {
       ...init,
-      headers: { apikey: process.env.EVOLUTION_API_KEY ?? "", ...init?.headers },
+      headers: { apikey: servidor.apiKey, ...init?.headers },
     })
     if (!resposta.ok) return null
     return (await resposta.json()) as T
@@ -43,6 +45,8 @@ type InstanciaApi = {
 }
 
 export type InstanciaEvolution = {
+  serverId: number
+  serverNome: string
   name: string
   numero: string | null
   status: "aberta" | "conectando" | "fechada" | "desconhecido"
@@ -64,7 +68,7 @@ const MIN_DIGITOS = 10
 export function acharInstancia(
   numeroChip: string,
   instancias: InstanciaEvolution[],
-): string | null {
+): { serverId: number; name: string } | null {
   const alvo = numeroChip.replace(/\D/g, "")
   if (alvo.length < MIN_DIGITOS) return null
 
@@ -72,36 +76,54 @@ export function acharInstancia(
     a.length >= MIN_DIGITOS && b.length >= MIN_DIGITOS && (a.endsWith(b) || b.endsWith(a))
 
   const achados = instancias.filter((i) => i.digitos.some((d) => casa(alvo, d)))
-  return achados.length === 1 ? achados[0].name : null
+  return achados.length === 1
+    ? { serverId: achados[0].serverId, name: achados[0].name }
+    : null
 }
 
 /** Lista as instâncias que existem na Evolution — a fonte pra associar cada
  * conta ao nome certo. O nome é rótulo livre; o número é só pra ajudar o
  * operador a reconhecer qual é qual. */
-export async function listarInstancias(): Promise<InstanciaEvolution[]> {
-  const dados = await chamarEvolution<InstanciaApi[]>(`/instance/fetchInstances`)
-  if (!Array.isArray(dados)) return []
-  return dados
-    .filter((i): i is InstanciaApi & { name: string } => typeof i.name === "string")
-    .map((i) => {
-      const doNumber = (i.number ?? "").replace(/\D/g, "")
-      const doOwner = (i.ownerJid ?? "").replace(/\D/g, "")
-      return {
-        name: i.name,
-        numero: i.number ?? i.ownerJid?.replace(/@.*/, "") ?? null,
-        status: mapearEstado(i.connectionStatus),
-        digitos: [doNumber, doOwner].filter((d) => d.length >= 10),
+export async function listarInstancias(
+  servidores: ServidorComId[],
+): Promise<InstanciaEvolution[]> {
+  const porServidor = await Promise.allSettled(
+    servidores.map(async (s) => {
+      const dados = await chamarEvolution<InstanciaApi[]>(s, `/instance/fetchInstances`)
+      if (!Array.isArray(dados)) {
+        console.warn(`listarInstancias: ${s.nome} não devolveu lista`)
+        return []
       }
-    })
-    .sort((a, b) => a.name.localeCompare(b.name))
+      return dados
+        .filter((i): i is InstanciaApi & { name: string } => typeof i.name === "string")
+        .map((i) => {
+          const doNumber = (i.number ?? "").replace(/\D/g, "")
+          const doOwner = (i.ownerJid ?? "").replace(/\D/g, "")
+          return {
+            serverId: s.id,
+            serverNome: s.nome,
+            name: i.name,
+            numero: i.number ?? i.ownerJid?.replace(/@.*/, "") ?? null,
+            status: mapearEstado(i.connectionStatus),
+            digitos: [doNumber, doOwner].filter((d) => d.length >= 10),
+          } satisfies InstanciaEvolution
+        })
+    }),
+  )
+
+  return porServidor
+    .flatMap((r) => (r.status === "fulfilled" ? r.value : []))
+    .sort((a, b) => a.serverNome.localeCompare(b.serverNome) || a.name.localeCompare(b.name))
 }
 
 type ConnectionStateApi = { instance?: { state?: string } }
 
 export async function buscarStatusConexao(
+  servidor: ServidorEvolution,
   instanceName: string,
 ): Promise<"aberta" | "conectando" | "fechada" | "desconhecido"> {
   const dados = await chamarEvolution<ConnectionStateApi>(
+    servidor,
     `/instance/connectionState/${instanceName}`,
   )
   return mapearEstado(dados?.instance?.state)
@@ -124,17 +146,21 @@ type ProxyApi = {
  * - host + ligado   → ativa
  */
 export async function buscarProxy(
+  servidor: ServidorEvolution,
   instanceName: string,
 ): Promise<"sem_conexao" | "ativa" | "inativa"> {
-  const dados = await chamarEvolution<ProxyApi>(`/proxy/find/${instanceName}`)
+  const dados = await chamarEvolution<ProxyApi>(servidor, `/proxy/find/${instanceName}`)
   if (!dados?.host) return "sem_conexao"
   return dados.enabled === false ? "inativa" : "ativa"
 }
 
 type ConnectApi = { base64?: string }
 
-export async function pedirQrCode(instanceName: string): Promise<string> {
-  const dados = await chamarEvolution<ConnectApi>(`/instance/connect/${instanceName}`, {
+export async function pedirQrCode(
+  servidor: ServidorEvolution,
+  instanceName: string,
+): Promise<string> {
+  const dados = await chamarEvolution<ConnectApi>(servidor, `/instance/connect/${instanceName}`, {
     method: "POST",
   })
   if (!dados?.base64) throw new Error("Evolution API não retornou QR code.")
