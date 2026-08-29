@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm"
 import {
+  boolean,
   date,
   integer,
   pgEnum,
@@ -28,6 +29,19 @@ export const evolutionStatus = pgEnum("evolution_status", [
 export const proxyStatus = pgEnum("proxy_status", ["sem_conexao", "ativa", "inativa"])
 export const deviceOrigem = pgEnum("device_origem", ["propria", "externa"])
 export const chipOrigem = pgEnum("chip_origem", ["propria", "externa"])
+
+export const evolutionServer = pgTable(
+  "evolution_server",
+  {
+    id: serial("id").primaryKey(),
+    nome: text("nome").notNull(),
+    url: text("url").notNull(),
+    apiKey: text("api_key").notNull(),
+    ativo: boolean("ativo").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("evolution_server_url").on(t.url)],
+)
 
 export const device = pgTable("device", {
   id: text("id").primaryKey(),
@@ -67,6 +81,7 @@ export const account = pgTable(
      * "05 - 63998163824"), nunca derivável do número — por isso é guardado.
      * `null` = ainda não associada; a sincronização fica em "desconhecido". */
     instanceName: text("instance_name"),
+    evolutionServerId: integer("evolution_server_id").references(() => evolutionServer.id),
     evolutionStatus: evolutionStatus("evolution_status").notNull().default("desconhecido"),
     proxyStatus: proxyStatus("proxy_status").notNull().default("sem_conexao"),
     statusVerificadoEm: timestamp("status_verificado_em", { withTimezone: true }),
