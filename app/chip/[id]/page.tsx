@@ -3,7 +3,7 @@ import { Archive, FolderOpen, Smartphone, TriangleAlert } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
-import { CancelarChip, EditarChip } from "@/components/chip-form"
+import { CancelarChip, EditarChip, ReativarChip } from "@/components/chip-form"
 import { ConexaoBadge } from "@/components/conexao-badge"
 import { OrigemBadge } from "@/components/origem-badge"
 import { PageHeader } from "@/components/page-header"
@@ -253,7 +253,15 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           origem={ficha.chip.origem}
         />
         <div className="mt-4">
-          <CancelarChip chipId={ficha.chip.id} />
+          {ficha.chip.status === "aposentado" && ficha.numeroPerdido ? (
+            <p className="text-muted-foreground text-sm">
+              Número perdido em ban — chip não pode ser reativado.
+            </p>
+          ) : ficha.chip.status === "aposentado" ? (
+            <ReativarChip chipId={ficha.chip.id} />
+          ) : (
+            <CancelarChip chipId={ficha.chip.id} />
+          )}
         </div>
       </section>
     </div>
