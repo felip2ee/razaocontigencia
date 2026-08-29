@@ -4,7 +4,7 @@ import { and, eq, isNull, sql } from "drizzle-orm"
 import { refresh } from "next/cache"
 
 import { db } from "./db.ts"
-import { account, chip, device, incident, warmupTask } from "./schema.ts"
+import { account, chip, device, evolutionServer, incident, warmupTask } from "./schema.ts"
 import { contasParaSorteio, listarCatalogo, paresRecentes } from "./queries.ts"
 import { gerarTarefasDoDia, hojeISO } from "./warmup.ts"
 
@@ -22,6 +22,7 @@ const MENSAGEM_DA_CONSTRAINT: Record<string, string> = {
   account_chip_ativo: "Esse chip já está em uso por outra conta ativa.",
   incident_aberto_unico: "Essa conta já tem um incidente aberto. Encerre o atual antes.",
   warmup_task_unica: "Essa tarefa já foi sorteada hoje para essa conta.",
+  evolution_server_url: "Já existe um servidor com essa URL.",
 }
 
 /** O erro do pg pode vir embrulhado pelo drizzle; a constraint fica na cadeia de causas. */
@@ -78,6 +79,14 @@ function textoOpcional(formData: FormData, campo: string): string | null {
   return typeof valor === "string" && valor.trim() !== "" ? valor.trim() : null
 }
 
+function urlDeServidor(formData: FormData): string {
+  const bruta = texto(formData, "url").replace(/\/$/, "")
+  if (!/^https?:\/\//i.test(bruta)) {
+    throw new ErroDeValidacao("A URL deve começar com http:// ou https://")
+  }
+  return bruta
+}
+
 export async function criarAparelho(
   estadoAnterior: EstadoDoForm,
   formData: FormData,
@@ -116,13 +125,42 @@ export async function ativarConta(
   return comMensagem(async () => {
     const chipId = texto(formData, "chipId")
     const [deviceId, slot] = texto(formData, "destino").split("|")
+    const instancia = textoOpcional(formData, "instancia")
+    let idServidor: number | null = null
+    let nomeInstancia: string | null = null
+    if (instancia) {
+      const sep = instancia.indexOf("::")
+      if (sep > 0) {
+        const id = Number(instancia.slice(0, sep))
+        const nome = instancia.slice(sep + 2)
+        if (Number.isInteger(id) && nome) {
+          idServidor = id
+          nomeInstancia = nome
+        }
+      }
+    }
+
     await db.transaction(async (tx) => {
+      let evolutionServerId: number | null = null
+      let instanceName: string | null = null
+      if (idServidor !== null && nomeInstancia) {
+        const [existe] = await tx
+          .select({ id: evolutionServer.id })
+          .from(evolutionServer)
+          .where(eq(evolutionServer.id, idServidor))
+        if (existe) {
+          evolutionServerId = idServidor
+          instanceName = nomeInstancia
+        }
+      }
+
       await tx.insert(account).values({
         deviceId,
         slot: slot as "wa1" | "wa2" | "business",
         chipId,
         ativadaEm: texto(formData, "ativadaEm"),
-        instanceName: textoOpcional(formData, "instanceName"),
+        evolutionServerId,
+        instanceName,
       })
       await tx.update(chip).set({ status: "em_uso" }).where(eq(chip.id, chipId))
     })
@@ -389,4 +427,71 @@ export async function reativarChip(formData: FormData) {
     .set({ status: "novo" })
     .where(eq(chip.id, texto(formData, "chipId")))
   refresh()
+}
+
+export async function criarServidorEvolution(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    await db.insert(evolutionServer).values({
+      nome: texto(formData, "nome"),
+      url: urlDeServidor(formData),
+      apiKey: texto(formData, "apiKey"),
+    })
+    return { aviso: "Servidor cadastrado." }
+  })
+}
+
+export async function editarServidorEvolution(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    const novaKey = textoOpcional(formData, "apiKey")
+    await db
+      .update(evolutionServer)
+      .set({
+        nome: texto(formData, "nome"),
+        url: urlDeServidor(formData),
+        ...(novaKey ? { apiKey: novaKey } : {}),
+      })
+      .where(eq(evolutionServer.id, Number(texto(formData, "serverId"))))
+    return { aviso: "Servidor atualizado." }
+  })
+}
+
+export async function alternarServidorEvolution(formData: FormData) {
+  const id = Number(texto(formData, "serverId"))
+  const [atual] = await db
+    .select({ ativo: evolutionServer.ativo })
+    .from(evolutionServer)
+    .where(eq(evolutionServer.id, id))
+  if (atual) {
+    await db
+      .update(evolutionServer)
+      .set({ ativo: !atual.ativo })
+      .where(eq(evolutionServer.id, id))
+  }
+  refresh()
+}
+
+export async function removerServidorEvolution(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    const id = Number(texto(formData, "serverId"))
+    const [{ n }] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(account)
+      .where(eq(account.evolutionServerId, id))
+    if (n > 0) {
+      throw new ErroDeValidacao(
+        `${n} conta(s) usam este servidor. Desative em vez de remover.`,
+      )
+    }
+    await db.delete(evolutionServer).where(eq(evolutionServer.id, id))
+    return { aviso: "Servidor removido." }
+  })
 }

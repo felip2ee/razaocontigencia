@@ -7,11 +7,12 @@ zero nem os "conserte" sem entender o motivo de estarem abertos.
 
 ## Comportamento
 
-**Contas existentes começam sem instância.** Depois da migração `0003`, toda
-conta tem `instance_name` nulo até ser associada. "Verificar todas" tenta
-associar sozinho pelo número do chip (`acharInstancia`), mas só quando o match
-é único; o resto o operador resolve na ficha do aparelho. Enquanto nula, a
-sincronização fica em "desconhecido" — comportamento esperado, não bug.
+**Contas existentes começam sem servidor e sem instância.** Depois das
+migrações `0003`/`0004`, toda conta tem `evolution_server_id` e
+`instance_name` nulos. "Verificar todas" tenta associar sozinho pelo número
+do chip contra todas as Evolutions ativas (`acharInstancia`), mas só no
+match único. O resto o operador resolve na ficha do aparelho. Enquanto
+faltar servidor ou instância, a sincronização fica em "desconhecido".
 
 **`buscarProxy` não testa conectividade, só lê o que a Evolution sabe.**
 A versão antiga fazia uma requisição real através do proxy contra a própria

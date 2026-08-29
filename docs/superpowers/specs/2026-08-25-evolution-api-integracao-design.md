@@ -78,6 +78,13 @@ de `.env.local`:
 - `pedirQrCode(instanceName): Promise<string>` — POST `/instance/connect/{instance}`,
   retorna o base64 do QR code.
 
+> **Atualizado em 2026-08-29 (múltiplas Evolutions).** As funções não leem
+> mais `EVOLUTION_API_URL`/`KEY` — recebem `{ url, apiKey }` do servidor por
+> parâmetro. Os servidores vivem na tabela `evolution_server` (tela
+> `/servidores`). `listarInstancias` recebe a lista de servidores ativos,
+> consulta em paralelo e marca cada instância com `serverId`. Ver
+> `docs/superpowers/specs/2026-08-29-multiplas-evolutions-design.md`.
+
 ## Server actions (`lib/evolution-actions.ts`)
 
 - `verificarConexao(accountId: number)` — resolve `chip.numero` da conta
