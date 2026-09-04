@@ -160,11 +160,11 @@ precisa escolher qual chip entra na bandeja. Para isso `lib/queries.ts` ganha
 conta ativa, mais o que já está na bandeja deste aparelho — sem ele o operador
 não consegue confirmar que a bandeja já está ocupada por aquele chip.
 
-`MaisAcoesDaConta` é uma janela só, com estado interno de etapa. A etapa `menu`
-lista as ações secundárias como linhas nomeadas com a frase de explicação;
-escolher uma troca o corpo da janela pelo formulário daquela ação, com um
-"← voltar". Evita janela dentro de janela e, de quebra, é onde o operador
-aprende o que cada operação faz.
+`MaisAcoesDaConta` é um `<details>` fechado com `<summary>Mais ações</summary>`.
+Aberto, mostra uma linha por ação secundária: o nome, a frase que explica o que
+ela faz, e o botão que abre a janela daquela ação. Elemento nativo, sem estado,
+sem janela dentro de janela — e é onde o operador aprende o que cada operação
+faz, que é o ponto.
 
 Ações secundárias da conta: `associar-instancia`, `corrigir-cadastro`,
 `encerrar-conta`.
