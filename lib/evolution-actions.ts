@@ -153,7 +153,9 @@ export async function definirInstancia(
 ): Promise<EstadoDoForm> {
   const accountId = Number(formData.get("accountId"))
   try {
-    if (!Number.isInteger(accountId)) throw new ErroConhecido("Conta inválida.")
+    if (!Number.isInteger(accountId) || accountId <= 0) {
+      throw new ErroConhecido("Conta inválida.")
+    }
 
     const bruto = formData.get("instancia")
     const valor = typeof bruto === "string" ? bruto.trim() : ""
@@ -176,10 +178,12 @@ export async function definirInstancia(
       }
     }
 
-    await db
+    const [contaAtualizada] = await db
       .update(account)
       .set({ evolutionServerId, instanceName })
       .where(eq(account.id, accountId))
+      .returning({ id: account.id })
+    if (!contaAtualizada) throw new ErroConhecido("Conta inválida.")
   } catch (erro) {
     if (erro instanceof ErroConhecido) return { erro: erro.message }
     console.error("definirInstancia:", erro)
