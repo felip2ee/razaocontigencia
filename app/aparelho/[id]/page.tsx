@@ -11,6 +11,7 @@ import {
 } from "@/components/aparelho-form"
 import { ConexaoBadge } from "@/components/conexao-badge"
 import { EmptyState } from "@/components/empty-state"
+import { FormAcao } from "@/components/form-acao"
 import { EncerrarIncidente, RegistrarIncidente } from "@/components/incident-form"
 import { OrigemBadge } from "@/components/origem-badge"
 import { PageHeader } from "@/components/page-header"
@@ -60,7 +61,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         titulo={ficha.device.id}
         subtitulo={ficha.device.apelido ?? "Sem apelido"}
         acoes={
-          <form action={mudarStatusDoAparelho} className="flex gap-2">
+          <FormAcao acao={mudarStatusDoAparelho} className="flex gap-2">
             <input type="hidden" name="deviceId" value={ficha.device.id} />
             <select
               name="status"
@@ -75,7 +76,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             <Button type="submit" size="sm" variant="outline">
               Mudar status
             </Button>
-          </form>
+          </FormAcao>
         }
       />
 

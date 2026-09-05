@@ -3,6 +3,7 @@
 import { and, eq, inArray, isNull, or } from "drizzle-orm"
 import { refresh } from "next/cache"
 
+import type { EstadoDoForm } from "./actions.ts"
 import { db } from "./db.ts"
 import {
   acharInstancia,
@@ -141,37 +142,45 @@ export async function verificarConexoes(accountIds: number[]): Promise<void> {
  * string vazia/ inválida) e já sincroniza o status na sequência. O valor vem
  * como `"<serverId>::<name>"` — split no primeiro `::` porque o nome pode
  * conter `::`. */
-export async function definirInstancia(formData: FormData): Promise<void> {
-  const accountId = Number(formData.get("accountId"))
-  if (!Number.isInteger(accountId)) throw new Error("Conta inválida.")
+export async function definirInstancia(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  try {
+    const accountId = Number(formData.get("accountId"))
+    if (!Number.isInteger(accountId)) throw new Error("Conta inválida.")
 
-  const bruto = formData.get("instancia")
-  const valor = typeof bruto === "string" ? bruto.trim() : ""
-  const sep = valor.indexOf("::")
+    const bruto = formData.get("instancia")
+    const valor = typeof bruto === "string" ? bruto.trim() : ""
+    const sep = valor.indexOf("::")
 
-  let evolutionServerId: number | null = null
-  let instanceName: string | null = null
-  if (sep > 0) {
-    const id = Number(valor.slice(0, sep))
-    const nome = valor.slice(sep + 2)
-    if (Number.isInteger(id) && nome) {
-      const [existe] = await db
-        .select({ id: evolutionServer.id })
-        .from(evolutionServer)
-        .where(eq(evolutionServer.id, id))
-      if (existe) {
-        evolutionServerId = id
-        instanceName = nome
+    let evolutionServerId: number | null = null
+    let instanceName: string | null = null
+    if (sep > 0) {
+      const id = Number(valor.slice(0, sep))
+      const nome = valor.slice(sep + 2)
+      if (Number.isInteger(id) && nome) {
+        const [existe] = await db
+          .select({ id: evolutionServer.id })
+          .from(evolutionServer)
+          .where(eq(evolutionServer.id, id))
+        if (existe) {
+          evolutionServerId = id
+          instanceName = nome
+        }
       }
     }
-  }
 
-  await db
-    .update(account)
-    .set({ evolutionServerId, instanceName })
-    .where(eq(account.id, accountId))
-  await verificarSemRefresh(accountId)
-  refresh()
+    await db
+      .update(account)
+      .set({ evolutionServerId, instanceName })
+      .where(eq(account.id, accountId))
+    await verificarSemRefresh(accountId)
+    refresh()
+    return { aviso: "Instância associada." }
+  } catch {
+    return { erro: "Não foi possível associar a instância." }
+  }
 }
 
 /** Só busca o QR code pro dialog — não grava nada. A conexão de fato só é

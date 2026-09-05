@@ -1,6 +1,6 @@
 "use server"
 
-import { and, eq, isNull, sql } from "drizzle-orm"
+import { and, eq, isNull, ne, sql } from "drizzle-orm"
 import { refresh } from "next/cache"
 
 import { db } from "./db.ts"
@@ -8,8 +8,14 @@ import { account, chip, device, evolutionServer, incident, warmupTask } from "./
 import { contasParaSorteio, listarCatalogo, paresRecentes } from "./queries.ts"
 import { gerarTarefasDoDia, hojeISO } from "./warmup.ts"
 
-/** O que uma action devolve para o formulário, via `useActionState`. */
-export type EstadoDoForm = { erro?: string; aviso?: string } | null
+/**
+ * O que uma action devolve para o formulário, via `useActionState`.
+ *
+ * `ok` existe porque a janela precisa saber que deu certo para se fechar
+ * sozinha. Antes, sucesso sem aviso e "ainda não enviei" eram os dois `null`,
+ * e a janela não tinha como distinguir um do outro.
+ */
+export type EstadoDoForm = { erro?: string; aviso?: string; ok?: true } | null
 
 /**
  * As regras que importam são constraints no banco. Aqui elas viram frase em
@@ -60,7 +66,7 @@ async function comMensagem(
   try {
     const estado = await trabalho()
     refresh()
-    return estado ?? null
+    return { ...(estado ?? {}), ok: true as const }
   } catch (erro) {
     return { erro: mensagemDoErro(erro) }
   }
@@ -185,75 +191,116 @@ export async function registrarIncidente(
 }
 
 /** Restrição acabou: carimba o fim. A duração é sempre calculada, nunca digitada. */
-export async function encerrarIncidente(formData: FormData) {
-  await db
-    .update(incident)
-    .set({ fim: new Date() })
-    .where(and(eq(incident.id, Number(texto(formData, "incidentId"))), isNull(incident.fim)))
-  refresh()
+export async function encerrarIncidente(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    await db
+      .update(incident)
+      .set({ fim: new Date() })
+      .where(
+        and(eq(incident.id, Number(texto(formData, "incidentId"))), isNull(incident.fim)),
+      )
+  })
 }
 
 /**
  * Resultado da análise de um ban. Se o número foi perdido, a conta é aposentada
  * e o chip também, liberando o slot para um chip novo.
  */
-export async function resolverBan(formData: FormData) {
-  const incidentId = Number(texto(formData, "incidentId"))
-  const resultado = texto(formData, "resultado") as "recuperada" | "perdida"
+export async function resolverBan(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    const incidentId = Number(texto(formData, "incidentId"))
+    const resultado = texto(formData, "resultado") as "recuperada" | "perdida"
 
-  await db.transaction(async (tx) => {
-    const [oIncidente] = await tx
-      .update(incident)
-      .set({ resultado, fim: new Date() })
-      .where(and(eq(incident.id, incidentId), isNull(incident.fim)))
-      .returning({ accountId: incident.accountId })
+    await db.transaction(async (tx) => {
+      const [oIncidente] = await tx
+        .update(incident)
+        .set({ resultado, fim: new Date() })
+        .where(and(eq(incident.id, incidentId), isNull(incident.fim)))
+        .returning({ accountId: incident.accountId })
 
-    // Já encerrado por outro clique: nada a fazer, e a tela recarregada mostra
-    // a situação real. Sem linha não há accountId, e seguir estouraria aqui.
-    if (!oIncidente) return
+      // Já encerrado por outro clique: nada a fazer, e a tela recarregada mostra
+      // a situação real. Sem linha não há accountId, e seguir estouraria aqui.
+      if (!oIncidente) return
 
-    if (resultado === "perdida") {
-      const [aConta] = await tx
-        .update(account)
-        .set({ status: "aposentada" })
-        .where(eq(account.id, oIncidente.accountId))
-        .returning({ chipId: account.chipId })
-      await tx.update(chip).set({ status: "aposentado" }).where(eq(chip.id, aConta.chipId))
-    }
+      if (resultado === "perdida") {
+        const [aConta] = await tx
+          .update(account)
+          .set({ status: "aposentada" })
+          .where(eq(account.id, oIncidente.accountId))
+          .returning({ chipId: account.chipId })
+        await tx.update(chip).set({ status: "aposentado" }).where(eq(chip.id, aConta.chipId))
+      }
+    })
   })
-  refresh()
 }
 
-export async function mudarStatusDoAparelho(formData: FormData) {
-  await db
-    .update(device)
-    .set({ status: texto(formData, "status") as "ativo" | "quarentena" | "aposentado" })
-    .where(eq(device.id, texto(formData, "deviceId")))
-  refresh()
+export async function mudarStatusDoAparelho(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    await db
+      .update(device)
+      .set({ status: texto(formData, "status") as "ativo" | "quarentena" | "aposentado" })
+      .where(eq(device.id, texto(formData, "deviceId")))
+    return { aviso: "Situação do aparelho alterada." }
+  })
 }
 
 /**
  * Move o chip entre pasta, gaveta e bandeja de um aparelho. Os campos que não
  * pertencem ao destino são zerados para o registro não mentir sobre onde o
  * chip está.
+ *
+ * Bandeja é física: cabe um chip. Antes de ocupar, o chip que estava lá volta
+ * para a pasta — senão dois chips ficam apontando para a mesma bandeja e
+ * `fichaDoAparelho` mostra o primeiro que o banco devolver, em silêncio.
  */
-export async function moverChip(formData: FormData) {
-  const local = texto(formData, "local") as "pasta" | "gaveta" | "bandeja"
-  const deviceId = textoOpcional(formData, "bandejaDeviceId")
+export async function moverChip(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    const chipId = texto(formData, "chipId")
+    const local = texto(formData, "local") as "pasta" | "gaveta" | "bandeja"
+    const deviceId = textoOpcional(formData, "bandejaDeviceId")
 
-  if (local === "bandeja" && !deviceId) {
-    throw new Error("Escolha o aparelho da bandeja")
-  }
+    if (local === "bandeja" && !deviceId) {
+      throw new ErroDeValidacao("Escolha o aparelho da bandeja.")
+    }
 
-  await db
-    .update(chip)
-    .set({
-      local,
-      bandejaDeviceId: local === "bandeja" ? deviceId : null,
-      posicao: local === "pasta" ? textoOpcional(formData, "posicao") : null,
+    await db.transaction(async (tx) => {
+      if (local === "bandeja" && deviceId) {
+        await tx
+          .update(chip)
+          .set({ local: "pasta", bandejaDeviceId: null })
+          .where(
+            and(
+              eq(chip.local, "bandeja"),
+              eq(chip.bandejaDeviceId, deviceId),
+              ne(chip.id, chipId),
+            ),
+          )
+      }
+
+      await tx
+        .update(chip)
+        .set({
+          local,
+          bandejaDeviceId: local === "bandeja" ? deviceId : null,
+          posicao: local === "pasta" ? textoOpcional(formData, "posicao") : null,
+        })
+        .where(eq(chip.id, chipId))
     })
-    .where(eq(chip.id, texto(formData, "chipId")))
-  refresh()
+
+    return { aviso: "Chip movido." }
+  })
 }
 
 /** Chave arbitrária do advisory lock que serializa a geração do aquecimento. */
@@ -406,27 +453,37 @@ export async function cancelarChip(
   })
 }
 
-export async function cancelarConta(formData: FormData) {
-  const accountId = Number(texto(formData, "accountId"))
-  await db.transaction(async (tx) => {
-    const [conta] = await tx
-      .update(account)
-      .set({ status: "aposentada" })
-      .where(eq(account.id, accountId))
-      .returning({ chipId: account.chipId })
-    if (conta) {
-      await tx.update(chip).set({ status: "novo" }).where(eq(chip.id, conta.chipId))
-    }
+export async function cancelarConta(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    const accountId = Number(texto(formData, "accountId"))
+    await db.transaction(async (tx) => {
+      const [conta] = await tx
+        .update(account)
+        .set({ status: "aposentada" })
+        .where(eq(account.id, accountId))
+        .returning({ chipId: account.chipId })
+      if (conta) {
+        await tx.update(chip).set({ status: "novo" }).where(eq(chip.id, conta.chipId))
+      }
+    })
+    return { aviso: "Conta encerrada. O slot está livre." }
   })
-  refresh()
 }
 
-export async function reativarChip(formData: FormData) {
-  await db
-    .update(chip)
-    .set({ status: "novo" })
-    .where(eq(chip.id, texto(formData, "chipId")))
-  refresh()
+export async function reativarChip(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
+  return comMensagem(async () => {
+    await db
+      .update(chip)
+      .set({ status: "novo" })
+      .where(eq(chip.id, texto(formData, "chipId")))
+    return { aviso: "Chip reativado." }
+  })
 }
 
 export async function criarServidorEvolution(

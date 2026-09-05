@@ -5,6 +5,7 @@ import { notFound } from "next/navigation"
 
 import { CancelarChip, EditarChip, ReativarChip } from "@/components/chip-form"
 import { ConexaoBadge } from "@/components/conexao-badge"
+import { FormAcao } from "@/components/form-acao"
 import { OrigemBadge } from "@/components/origem-badge"
 import { PageHeader } from "@/components/page-header"
 import { ReconectarDialog } from "@/components/reconectar-dialog"
@@ -185,7 +186,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             Só o campo do destino escolhido é guardado; os outros são apagados.
           </p>
         </div>
-        <form action={moverChip} className="flex max-w-md flex-col gap-3 p-4">
+        <FormAcao acao={moverChip} className="flex max-w-md flex-col gap-3 p-4">
           <input type="hidden" name="chipId" value={ficha.chip.id} />
           <div className="grid gap-1.5">
             <Label htmlFor="mv-local">Destino</Label>
@@ -241,7 +242,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           <Button type="submit" className="self-start">
             Mover chip
           </Button>
-        </form>
+        </FormAcao>
       </section>
 
       <section className="bg-card border-border rounded-xl border p-4">

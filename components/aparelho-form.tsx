@@ -72,7 +72,7 @@ export function DefinirInstancia({
   )
 
   return (
-    <form action={definirInstancia} className="flex flex-wrap items-center gap-2">
+    <FormAcao acao={definirInstancia} className="flex flex-wrap items-center gap-2">
       <input type="hidden" name="accountId" value={accountId} />
       <select
         name="instancia"
@@ -107,18 +107,18 @@ export function DefinirInstancia({
           {falharam.join(", ")} não respondeu(ram).
         </span>
       )}
-    </form>
+    </FormAcao>
   )
 }
 
 export function CancelarConta({ accountId }: { accountId: number }) {
   return (
-    <form action={cancelarConta}>
+    <FormAcao acao={cancelarConta}>
       <input type="hidden" name="accountId" value={accountId} />
       <Button type="submit" size="sm" variant="destructive">
         Cancelar conta
       </Button>
-    </form>
+    </FormAcao>
   )
 }
 

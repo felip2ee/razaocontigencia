@@ -44,25 +44,25 @@ export function EncerrarIncidente({
 
   if (tipo === "restricao") {
     return (
-      <form action={encerrarIncidente}>
+      <FormAcao acao={encerrarIncidente}>
         <input type="hidden" name="incidentId" value={incidentId} />
         <Button type="submit" size="sm" aria-label={rotulo("Voltou")}>
           Voltou
         </Button>
-      </form>
+      </FormAcao>
     )
   }
 
   return (
     <div className="flex gap-2">
-      <form action={resolverBan}>
+      <FormAcao acao={resolverBan}>
         <input type="hidden" name="incidentId" value={incidentId} />
         <input type="hidden" name="resultado" value="recuperada" />
         <Button type="submit" size="sm" aria-label={rotulo("Análise devolveu")}>
           Análise devolveu
         </Button>
-      </form>
-      <form action={resolverBan}>
+      </FormAcao>
+      <FormAcao acao={resolverBan}>
         <input type="hidden" name="incidentId" value={incidentId} />
         <input type="hidden" name="resultado" value="perdida" />
         <Button
@@ -73,7 +73,7 @@ export function EncerrarIncidente({
         >
           Perdido
         </Button>
-      </form>
+      </FormAcao>
     </div>
   )
 }

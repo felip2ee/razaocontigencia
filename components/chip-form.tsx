@@ -65,11 +65,11 @@ export function CancelarChip({ chipId }: { chipId: string }) {
 
 export function ReativarChip({ chipId }: { chipId: string }) {
   return (
-    <form action={reativarChip}>
+    <FormAcao acao={reativarChip}>
       <input type="hidden" name="chipId" value={chipId} />
       <Button type="submit" size="sm" variant="outline">
         Reativar chip
       </Button>
-    </form>
+    </FormAcao>
   )
 }
