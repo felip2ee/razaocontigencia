@@ -149,7 +149,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 </Link>{" "}
                 — {NOME_DO_SLOT[ficha.conta.slot]} — ativada em{" "}
                 <span className="tabular-nums">{dataBR(ficha.conta.ativadaEm)}</span> —{" "}
-                {ficha.conta.status}
+                {"ativa"}
               </span>
             ) : (
               <span className="text-muted-foreground">
