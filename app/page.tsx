@@ -2,7 +2,7 @@ import { CircuitBoard, Globe, Search, ShieldAlert, ShieldCheck, Smartphone, Wifi
 import Link from "next/link"
 
 import { EmptyState } from "@/components/empty-state"
-import { EncerrarIncidente } from "@/components/incident-form"
+import { ResolverBan, VoltouAoAr } from "@/components/acoes/conta"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
 import { StatusBadge } from "@/components/status-badge"
@@ -144,12 +144,12 @@ export default async function Page({
                       {c.resultado ?? "—"}
                     </TableCell>
                     <TableCell>
-                      <div className="flex justify-end">
-                        <EncerrarIncidente
-                          incidentId={c.incidentId}
-                          tipo={c.tipo}
-                          conta={`${c.deviceId}, ${NOME_DO_SLOT[c.slot]}`}
-                        />
+                      <div className="flex justify-end gap-2">
+                        {c.tipo === "ban" ? (
+                          <ResolverBan incidentId={c.incidentId} />
+                        ) : (
+                          <VoltouAoAr incidentId={c.incidentId} />
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

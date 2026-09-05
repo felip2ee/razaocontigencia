@@ -3,19 +3,11 @@ import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ativarConta, criarAparelho, criarChip } from "@/lib/actions"
-import { listarInstancias } from "@/lib/evolution"
-import { chipsLivres, servidoresEvolutionAtivos, slotsLivres } from "@/lib/queries"
-import { NOME_DO_SLOT } from "@/lib/slots"
+import { criarAparelho, criarChip } from "@/lib/actions"
 
 export const dynamic = "force-dynamic"
 
 export default async function Page() {
-  const slots = await slotsLivres()
-  const livres = await chipsLivres()
-  const servidores = await servidoresEvolutionAtivos()
-  const { instancias, falharam } = await listarInstancias(servidores)
-
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -25,7 +17,7 @@ export default async function Page() {
 
       {/* lg e não md: a sidebar fixa de 224px come a largura, então em 900px
           de viewport o conteúdo só tem ~650px e três colunas ficariam apertadas. */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-2">
         <div className="bg-card border-border rounded-xl border p-5">
           <h2 className="font-medium">Novo aparelho</h2>
           <p className="text-muted-foreground mt-0.5 mb-4 text-sm">
@@ -97,90 +89,12 @@ export default async function Page() {
             <Button type="submit">Cadastrar chip</Button>
           </FormAcao>
         </div>
-
-        <div className="bg-card border-border rounded-xl border p-5">
-          <h2 className="font-medium">Ativar conta</h2>
-          <p className="text-muted-foreground mt-0.5 mb-4 text-sm">
-            Quando um chip livre vira WhatsApp num slot do aparelho.
-          </p>
-          <FormAcao acao={ativarConta} className="flex flex-col gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="co-destino">Aparelho e slot</Label>
-              {slots.length === 0 ? (
-                <p className="text-muted-foreground text-sm">
-                  Nenhuma vaga livre em nenhum aparelho ativo.
-                </p>
-              ) : (
-                <select
-                  id="co-destino"
-                  name="destino"
-                  required
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                >
-                  {slots.map((s) => (
-                    <option key={`${s.deviceId}|${s.slot}`} value={`${s.deviceId}|${s.slot}`}>
-                      {s.deviceId} {s.apelido ? `— ${s.apelido}` : ""} — {NOME_DO_SLOT[s.slot]}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="co-chip">Chip</Label>
-              <select
-                id="co-chip"
-                name="chipId"
-                required
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-              >
-                {livres.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.id} — {c.numero} ({c.operadora})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="co-data">Ativada em</Label>
-              <Input id="co-data" name="ativadaEm" type="date" required />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="co-instancia">Instância na Evolution</Label>
-              <select
-                id="co-instancia"
-                name="instancia"
-                defaultValue=""
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-              >
-                <option value="">— associar depois —</option>
-                {servidores.map((s) => (
-                  <optgroup key={s.id} label={s.nome}>
-                    {instancias
-                      .filter((i) => i.serverId === s.id)
-                      .map((i) => (
-                        <option key={`${i.serverId}::${i.name}`} value={`${i.serverId}::${i.name}`}>
-                          {i.name}
-                          {i.numero ? ` — ${i.numero}` : ""} ({i.status})
-                        </option>
-                      ))}
-                  </optgroup>
-                ))}
-              </select>
-              {servidores.length === 0 && (
-                <p className="text-muted-foreground text-xs">
-                  Cadastre um servidor Evolution em /servidores primeiro.
-                </p>
-              )}
-              {falharam.length > 0 && (
-                <p className="text-muted-foreground text-xs">
-                  {falharam.join(", ")} não respondeu(ram).
-                </p>
-              )}
-            </div>
-            <Button type="submit">Ativar conta</Button>
-          </FormAcao>
-        </div>
       </div>
+
+      <p className="text-muted-foreground text-sm">
+        Para ativar uma conta, abra o aparelho e use o slot livre, ou abra o chip e use
+        &ldquo;Ativar conta com este chip&rdquo;.
+      </p>
     </div>
   )
 }
