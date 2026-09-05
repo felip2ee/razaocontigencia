@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, ilike, isNotNull, isNull, max, or, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, gte, ilike, isNotNull, isNull, max, ne, notInArray, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 
 import { db } from "./db.ts"
@@ -552,4 +552,32 @@ export async function servidoresEvolutionAtivos(): Promise<ServidorComId[]> {
     .where(eq(evolutionServer.ativo, true))
     .orderBy(asc(evolutionServer.nome))
   return linhas.map((s) => ({ id: s.id, nome: s.nome, url: s.url, apiKey: s.apiKey }))
+}
+
+export type ChipParaBandeja = { id: string; numero: string; operadora: string }
+
+/**
+ * Chips que podem ir para a bandeja deste aparelho: não aposentados e sem
+ * conta ativa. O que já está nesta bandeja entra também — sem ele o select
+ * abriria sem o valor atual, e o operador não veria que a bandeja está ocupada.
+ */
+export async function chipsParaBandeja(deviceId: string): Promise<ChipParaBandeja[]> {
+  const emContaAtiva = db
+    .select({ chipId: account.chipId })
+    .from(account)
+    .where(eq(account.status, "ativa"))
+
+  return db
+    .select({ id: chip.id, numero: chip.numero, operadora: chip.operadora })
+    .from(chip)
+    .where(
+      and(
+        ne(chip.status, "aposentado"),
+        or(
+          notInArray(chip.id, emContaAtiva),
+          and(eq(chip.local, "bandeja"), eq(chip.bandejaDeviceId, deviceId)),
+        ),
+      ),
+    )
+    .orderBy(asc(chip.id))
 }
