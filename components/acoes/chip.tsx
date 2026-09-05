@@ -107,6 +107,7 @@ export function MoverChip({
             defaultValue={bandejaDeviceId ?? ""}
             className={CAMPO}
           >
+            <option value="">— escolher —</option>
             {aparelhos.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.id}

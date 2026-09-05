@@ -329,6 +329,15 @@ export function MaisAcoesDaConta({
       ? `${conta.evolutionServerId}::${conta.instanceName}`
       : ""
 
+  // O aparelho atual da conta pode não estar na lista (ex.: aparelho em
+  // quarentena, que não é "ativo" mas continua com contas ativas). Sem ele
+  // como opção, o `<select defaultValue={conta.deviceId}>` cai calado na
+  // primeira opção e "Corrigir cadastro" move a conta para um aparelho que
+  // ninguém escolheu. Root fix aqui cobre as duas páginas que chamam isto.
+  const aparelhosComAtual = aparelhos.some((a) => a.id === conta.deviceId)
+    ? aparelhos
+    : [{ id: conta.deviceId, apelido: null }, ...aparelhos]
+
   return (
     <details className="group">
       <summary className="cursor-pointer list-none text-xs font-medium text-muted-foreground select-none hover:text-foreground">
@@ -378,7 +387,7 @@ export function MaisAcoesDaConta({
                 defaultValue={conta.deviceId}
                 className={CAMPO}
               >
-                {aparelhos.map((a) => (
+                {aparelhosComAtual.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.id}
                     {a.apelido ? ` — ${a.apelido}` : ""}

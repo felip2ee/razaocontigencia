@@ -16,7 +16,7 @@ export default async function Page() {
       />
 
       {/* lg e não md: a sidebar fixa de 224px come a largura, então em 900px
-          de viewport o conteúdo só tem ~650px e três colunas ficariam apertadas. */}
+          de viewport o conteúdo só tem ~650px e duas colunas ficariam apertadas. */}
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="bg-card border-border rounded-xl border p-5">
           <h2 className="font-medium">Novo aparelho</h2>

@@ -61,7 +61,13 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
   const servidores = await servidoresEvolutionAtivos()
   const { instancias, falharam } = await listarInstancias(servidores)
-  const vagas = ficha.chip.status === "novo" ? await slotsLivres() : []
+
+  // Uma const, dois usos (o await abaixo e o galho de render mais adiante),
+  // para as duas condições não voltarem a divergir: um chip `em_uso` sem conta
+  // ativa não pode oferecer "Ativar conta".
+  const podeAtivar =
+    !ficha.conta && ficha.chip.status === "novo" && ficha.chip.local !== "bandeja"
+  const vagas = podeAtivar ? await slotsLivres() : []
 
   const c = ficha.conta
   const hoje = new Date()
@@ -223,6 +229,11 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               Este chip não é WhatsApp. Está na bandeja
               {ficha.aparelhoDaBandeja ? ` do ${ficha.aparelhoDaBandeja.id}` : ""} dando
               internet 4G. Restrição e ban não se aplicam.
+            </p>
+          ) : !podeAtivar ? (
+            <p className="text-muted-foreground mt-1 text-sm">
+              Este chip consta como em uso, mas não há uma conta de WhatsApp ativa ligada a
+              ele agora.
             </p>
           ) : (
             <>

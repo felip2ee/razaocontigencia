@@ -46,25 +46,26 @@ export function DialogAcao({
   children?: React.ReactNode
 }) {
   const [aberto, setAberto] = useState(false)
+  // O erro só vale para o envio que o produziu: limpo ao abrir a janela,
+  // marcado quando um resultado com `erro` chega. Sem isso, reabrir a janela
+  // depois de um envio recusado mostra o erro velho sobre campos limpos.
+  const [mostrarErro, setMostrarErro] = useState(false)
   const formulario = useRef<HTMLFormElement>(null)
   const ultimoEnvio = useRef<FormData | null>(null)
 
+  // Fecha dentro da action (numa transition), não num efeito — sem
+  // `set-state-in-effect` e sem o disable que ele exigia. É para isto que `ok`
+  // existe: sucesso sem aviso e "ainda não enviei" eram os dois `null`.
   const [estado, enviar, pendente] = useActionState(
     async (anterior: EstadoDoForm, formData: FormData) => {
       ultimoEnvio.current = formData
-      return acao(anterior, formData)
+      const resultado = await acao(anterior, formData)
+      if (resultado?.ok) setAberto(false)
+      if (resultado?.erro) setMostrarErro(true)
+      return resultado
     },
     null,
   )
-
-  // Fecha só quando a action confirmou sucesso. É para isto que `ok` existe:
-  // sucesso sem aviso e "ainda não enviei" eram os dois `null`.
-  useEffect(() => {
-    if (estado?.ok) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setAberto(false)
-    }
-  }, [estado])
 
   // Deu erro: devolve o que foi digitado. O React limpa o formulário depois da
   // action, e aqui se digita código de fita à mão.
@@ -84,7 +85,10 @@ export function DialogAcao({
         variant={variant}
         size={size}
         className={className}
-        onClick={() => setAberto(true)}
+        onClick={() => {
+          setMostrarErro(false)
+          setAberto(true)
+        }}
       >
         {rotulo}
       </Button>
@@ -96,7 +100,7 @@ export function DialogAcao({
           </DialogHeader>
           <form ref={formulario} action={enviar} className="flex flex-col gap-3">
             {children}
-            {estado?.erro && (
+            {mostrarErro && estado?.erro && (
               <p role="alert" className="text-destructive text-sm">
                 {estado.erro}
               </p>

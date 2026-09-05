@@ -3,7 +3,14 @@
 import { useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { ACOES } from "@/lib/acoes"
 import { gerarQrCode, verificarConexao } from "@/lib/evolution-actions"
 
 export function ReconectarDialog({ accountId }: { accountId: number }) {
@@ -39,12 +46,13 @@ export function ReconectarDialog({ accountId }: { accountId: number }) {
   return (
     <>
       <Button size="sm" disabled={pending} onClick={abrir}>
-        Reconectar
+        {ACOES["reconectar"].rotulo}
       </Button>
       <Dialog open={aberto} onOpenChange={setAberto}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reconectar conta {accountId}</DialogTitle>
+            <DialogTitle>{ACOES["reconectar"].rotulo}</DialogTitle>
+            <DialogDescription>{ACOES["reconectar"].frase}</DialogDescription>
           </DialogHeader>
           {pending && !qr && !erro && (
             <p className="text-muted-foreground text-sm">Gerando QR code…</p>

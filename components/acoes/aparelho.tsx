@@ -113,6 +113,7 @@ export function TrocarChipDaBandeja({
             required
             className={CAMPO}
           >
+            <option value="">— escolher —</option>
             {chips.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.id} — {c.numero} ({c.operadora})

@@ -138,6 +138,11 @@ export async function verificarConexoes(accountIds: number[]): Promise<void> {
   refresh()
 }
 
+/** Erro com mensagem já pronta para o operador. O catch preserva `.message`
+ * em vez de trocar por uma frase genérica — mesmo espírito de `mensagemDoErro`
+ * em `lib/actions.ts`, sem cruzar internals entre os módulos. */
+class ErroConhecido extends Error {}
+
 /** Associa a conta a um servidor + instância da Evolution (ou limpa, com
  * string vazia/ inválida) e já sincroniza o status na sequência. O valor vem
  * como `"<serverId>::<name>"` — split no primeiro `::` porque o nome pode
@@ -146,9 +151,9 @@ export async function definirInstancia(
   estadoAnterior: EstadoDoForm,
   formData: FormData,
 ): Promise<EstadoDoForm> {
+  const accountId = Number(formData.get("accountId"))
   try {
-    const accountId = Number(formData.get("accountId"))
-    if (!Number.isInteger(accountId)) throw new Error("Conta inválida.")
+    if (!Number.isInteger(accountId)) throw new ErroConhecido("Conta inválida.")
 
     const bruto = formData.get("instancia")
     const valor = typeof bruto === "string" ? bruto.trim() : ""
@@ -175,12 +180,22 @@ export async function definirInstancia(
       .update(account)
       .set({ evolutionServerId, instanceName })
       .where(eq(account.id, accountId))
-    await verificarSemRefresh(accountId)
-    refresh()
-    return { aviso: "Instância associada." }
-  } catch {
+  } catch (erro) {
+    if (erro instanceof ErroConhecido) return { erro: erro.message }
+    console.error("definirInstancia:", erro)
     return { erro: "Não foi possível associar a instância." }
   }
+
+  // A associação já foi gravada. Sincronizar o status é best-effort: uma falha
+  // aqui não desfaz nada e não pode reportar "não foi possível associar" —
+  // isso seria um erro falso sobre uma escrita que deu certo.
+  try {
+    await verificarSemRefresh(accountId)
+  } catch (erro) {
+    console.warn("definirInstancia: associada, falhou ao sincronizar status:", erro)
+  }
+  refresh()
+  return { ok: true as const, aviso: "Instância associada." }
 }
 
 /** Só busca o QR code pro dialog — não grava nada. A conexão de fato só é
