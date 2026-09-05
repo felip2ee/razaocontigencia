@@ -3,6 +3,7 @@
 import { and, eq, inArray, isNull, or } from "drizzle-orm"
 import { refresh } from "next/cache"
 
+import type { EstadoDoForm } from "./actions.ts"
 import { db } from "./db.ts"
 import {
   acharInstancia,
@@ -137,41 +138,68 @@ export async function verificarConexoes(accountIds: number[]): Promise<void> {
   refresh()
 }
 
+/** Erro com mensagem já pronta para o operador. O catch preserva `.message`
+ * em vez de trocar por uma frase genérica — mesmo espírito de `mensagemDoErro`
+ * em `lib/actions.ts`, sem cruzar internals entre os módulos. */
+class ErroConhecido extends Error {}
+
 /** Associa a conta a um servidor + instância da Evolution (ou limpa, com
  * string vazia/ inválida) e já sincroniza o status na sequência. O valor vem
  * como `"<serverId>::<name>"` — split no primeiro `::` porque o nome pode
  * conter `::`. */
-export async function definirInstancia(formData: FormData): Promise<void> {
+export async function definirInstancia(
+  estadoAnterior: EstadoDoForm,
+  formData: FormData,
+): Promise<EstadoDoForm> {
   const accountId = Number(formData.get("accountId"))
-  if (!Number.isInteger(accountId)) throw new Error("Conta inválida.")
+  try {
+    if (!Number.isInteger(accountId) || accountId <= 0) {
+      throw new ErroConhecido("Conta inválida.")
+    }
 
-  const bruto = formData.get("instancia")
-  const valor = typeof bruto === "string" ? bruto.trim() : ""
-  const sep = valor.indexOf("::")
+    const bruto = formData.get("instancia")
+    const valor = typeof bruto === "string" ? bruto.trim() : ""
+    const sep = valor.indexOf("::")
 
-  let evolutionServerId: number | null = null
-  let instanceName: string | null = null
-  if (sep > 0) {
-    const id = Number(valor.slice(0, sep))
-    const nome = valor.slice(sep + 2)
-    if (Number.isInteger(id) && nome) {
-      const [existe] = await db
-        .select({ id: evolutionServer.id })
-        .from(evolutionServer)
-        .where(eq(evolutionServer.id, id))
-      if (existe) {
-        evolutionServerId = id
-        instanceName = nome
+    let evolutionServerId: number | null = null
+    let instanceName: string | null = null
+    if (sep > 0) {
+      const id = Number(valor.slice(0, sep))
+      const nome = valor.slice(sep + 2)
+      if (Number.isInteger(id) && nome) {
+        const [existe] = await db
+          .select({ id: evolutionServer.id })
+          .from(evolutionServer)
+          .where(eq(evolutionServer.id, id))
+        if (existe) {
+          evolutionServerId = id
+          instanceName = nome
+        }
       }
     }
+
+    const [contaAtualizada] = await db
+      .update(account)
+      .set({ evolutionServerId, instanceName })
+      .where(eq(account.id, accountId))
+      .returning({ id: account.id })
+    if (!contaAtualizada) throw new ErroConhecido("Conta inválida.")
+  } catch (erro) {
+    if (erro instanceof ErroConhecido) return { erro: erro.message }
+    console.error("definirInstancia:", erro)
+    return { erro: "Não foi possível associar a instância." }
   }
 
-  await db
-    .update(account)
-    .set({ evolutionServerId, instanceName })
-    .where(eq(account.id, accountId))
-  await verificarSemRefresh(accountId)
+  // A associação já foi gravada. Sincronizar o status é best-effort: uma falha
+  // aqui não desfaz nada e não pode reportar "não foi possível associar" —
+  // isso seria um erro falso sobre uma escrita que deu certo.
+  try {
+    await verificarSemRefresh(accountId)
+  } catch (erro) {
+    console.warn("definirInstancia: associada, falhou ao sincronizar status:", erro)
+  }
   refresh()
+  return { ok: true as const, aviso: "Instância associada." }
 }
 
 /** Só busca o QR code pro dialog — não grava nada. A conexão de fato só é

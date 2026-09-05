@@ -4,19 +4,23 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 
 import {
-  CancelarConta,
-  CorrigirAparelho,
-  DefinirInstancia,
   EditarAparelho,
-} from "@/components/aparelho-form"
+  MudarSituacao,
+  TrocarChipDaBandeja,
+} from "@/components/acoes/aparelho"
+import {
+  AtivarConta,
+  MaisAcoesDaConta,
+  RegistrarQueda,
+  ResolverBan,
+  VoltouAoAr,
+} from "@/components/acoes/conta"
 import { ConexaoBadge } from "@/components/conexao-badge"
 import { EmptyState } from "@/components/empty-state"
-import { EncerrarIncidente, RegistrarIncidente } from "@/components/incident-form"
 import { OrigemBadge } from "@/components/origem-badge"
 import { PageHeader } from "@/components/page-header"
 import { ReconectarDialog } from "@/components/reconectar-dialog"
 import { StatusBadge, StatusDeCadastro } from "@/components/status-badge"
-import { Button } from "@/components/ui/button"
 import {
   Table,
   TableBody,
@@ -25,10 +29,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { mudarStatusDoAparelho } from "@/lib/actions"
 import { db } from "@/lib/db"
 import { listarInstancias } from "@/lib/evolution"
-import { fichaDoAparelho, servidoresEvolutionAtivos } from "@/lib/queries"
+import {
+  chipsLivres,
+  chipsParaBandeja,
+  fichaDoAparelho,
+  servidoresEvolutionAtivos,
+} from "@/lib/queries"
 import { device } from "@/lib/schema"
 import { NOME_DO_SLOT, SLOTS } from "@/lib/slots"
 import { cn, LINK } from "@/lib/utils"
@@ -51,6 +59,8 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
   const servidores = await servidoresEvolutionAtivos()
   const { instancias, falharam } = await listarInstancias(servidores)
+  const paraBandeja = await chipsParaBandeja(id)
+  const livres = await chipsLivres()
 
   const hoje = new Date()
 
@@ -60,32 +70,41 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         titulo={ficha.device.id}
         subtitulo={ficha.device.apelido ?? "Sem apelido"}
         acoes={
-          <form action={mudarStatusDoAparelho} className="flex gap-2">
-            <input type="hidden" name="deviceId" value={ficha.device.id} />
-            <select
-              name="status"
-              defaultValue={ficha.device.status}
-              className="border-input bg-background h-8 rounded-md border px-2 text-sm"
-              aria-label="Status do aparelho"
-            >
-              <option value="ativo">ativo</option>
-              <option value="quarentena">quarentena</option>
-              <option value="aposentado">aposentado</option>
-            </select>
-            <Button type="submit" size="sm" variant="outline">
-              Mudar status
-            </Button>
-          </form>
+          <div className="flex flex-wrap gap-2">
+            <EditarAparelho
+              deviceId={ficha.device.id}
+              apelido={ficha.device.apelido}
+              notas={ficha.device.notas}
+              origem={ficha.device.origem}
+            />
+            <MudarSituacao deviceId={ficha.device.id} status={ficha.device.status} />
+          </div>
         }
       />
 
       <div className="bg-card border-border flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border px-4 py-3 text-sm">
         <div>
           <div className="text-muted-foreground text-xs tracking-wide uppercase">
-            Status
+            Situação
           </div>
           <div className="mt-0.5">
             <StatusDeCadastro valor={ficha.device.status} />
+          </div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs tracking-wide uppercase">
+            Origem
+          </div>
+          <div className="mt-0.5">
+            <OrigemBadge origem={ficha.device.origem} />
+          </div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs tracking-wide uppercase">
+            Contas
+          </div>
+          <div className="mt-0.5 font-medium tabular-nums">
+            {ficha.contas.length} de {SLOTS.length}
           </div>
         </div>
         <div>
@@ -94,22 +113,133 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </div>
           <div className="mt-0.5 font-medium tabular-nums">{ficha.totalBans}</div>
         </div>
-        <div>
-          <div className="text-muted-foreground text-xs tracking-wide uppercase">
-            Origem
-          </div>
-          <div className="mt-0.5">
-            <OrigemBadge origem={ficha.device.origem} />
-            {ficha.device.origem === "propria" && (
-              <span className="text-muted-foreground text-sm">Própria</span>
-            )}
-          </div>
+      </div>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-medium">Contas de WhatsApp</h2>
+        {/* lg e não md: a sidebar fixa de 224px come a largura, então em 900px
+            de viewport o conteúdo só tem ~650px e três colunas ficariam apertadas. */}
+        <div className="grid gap-3 lg:grid-cols-3">
+          {SLOTS.map((slot) => {
+            const c = ficha.contas.find((conta) => conta.slot === slot)
+
+            // Slot nunca ativado, ou liberado por ban perdido: o operador
+            // precisa ver a vaga, senão ela some da tela e da cabeça dele.
+            if (!c) {
+              return (
+                <div
+                  key={slot}
+                  className="bg-card border-border flex flex-col gap-2 rounded-xl border p-4"
+                >
+                  <div className="text-muted-foreground text-xs tracking-wide uppercase">
+                    {NOME_DO_SLOT[slot]}
+                  </div>
+                  <div className="text-muted-foreground">Nenhuma conta aqui</div>
+                  <div className="mt-auto pt-1">
+                    <AtivarConta
+                      rotulo="Ativar conta neste slot"
+                      destino={{ deviceId: ficha.device.id, slot }}
+                      chip={{ opcoes: livres }}
+                      instancias={instancias}
+                      servidores={servidores}
+                      falharam={falharam}
+                    />
+                  </div>
+                </div>
+              )
+            }
+
+            return (
+              <div
+                key={c.id}
+                className="bg-card border-border flex flex-col gap-2 rounded-xl border p-4"
+              >
+                <div className="text-muted-foreground text-xs tracking-wide uppercase">
+                  {NOME_DO_SLOT[c.slot]}
+                </div>
+                <div className="text-lg font-medium tabular-nums">{c.numero}</div>
+                <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 text-sm">
+                  <Link href={`/chip/${c.chipId}`} className={LINK}>
+                    {c.chipId}
+                  </Link>
+                  <span className="tabular-nums">
+                    {idadeEmDias(c.ativadaEm, hoje)} dias
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge
+                    estado={
+                      c.incidenteAberto
+                        ? c.incidenteAberto.tipo === "ban"
+                          ? "ban"
+                          : "restricao"
+                        : "ok"
+                    }
+                  />
+                  {c.incidenteAberto && (
+                    <span className="text-muted-foreground text-xs tabular-nums">
+                      há {tempoDecorrido(c.incidenteAberto.inicio)}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <ConexaoBadge
+                    status={c.evolutionStatus}
+                    proxy={c.proxyStatus}
+                    statusVerificadoEm={c.statusVerificadoEm}
+                  />
+                </div>
+                {c.evolutionServerNome && c.instanceName && (
+                  <div className="text-muted-foreground text-xs">
+                    {c.evolutionServerNome} · {c.instanceName}
+                  </div>
+                )}
+
+                <div className="border-border mt-auto flex flex-wrap items-center gap-2 border-t pt-2">
+                  {c.incidenteAberto?.tipo === "ban" ? (
+                    <ResolverBan incidentId={c.incidenteAberto.incidentId} />
+                  ) : c.incidenteAberto ? (
+                    <VoltouAoAr incidentId={c.incidenteAberto.incidentId} />
+                  ) : (
+                    <RegistrarQueda accountId={c.id} />
+                  )}
+                  {c.evolutionStatus === "fechada" ? (
+                    <ReconectarDialog accountId={c.id} />
+                  ) : (
+                    <VerificarConexao accountId={c.id} />
+                  )}
+                </div>
+
+                <div className="border-border border-t pt-2">
+                  <MaisAcoesDaConta
+                    conta={{
+                      id: c.id,
+                      deviceId: c.deviceId,
+                      slot: c.slot,
+                      instanceName: c.instanceName,
+                      evolutionServerId: c.evolutionServerId,
+                    }}
+                    aparelhos={aparelhos}
+                    instancias={instancias}
+                    servidores={servidores}
+                    falharam={falharam}
+                  />
+                </div>
+              </div>
+            )
+          })}
         </div>
-        <div>
-          <div className="text-muted-foreground text-xs tracking-wide uppercase">
-            Chip na bandeja
-          </div>
-          <div className="mt-0.5">
+      </section>
+
+      <section className="bg-card border-border rounded-xl border p-4">
+        <h2 className="font-medium">Chip de rede (bandeja)</h2>
+        <p className="text-muted-foreground mt-0.5 text-sm">
+          Só internet 4G. Não é WhatsApp.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <div>
             {ficha.chipNaBandeja ? (
               <Link
                 href={`/chip/${ficha.chipNaBandeja.id}`}
@@ -120,134 +250,16 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
                 {ficha.chipNaBandeja.operadora})
               </Link>
             ) : (
-              <span className="text-muted-foreground">Bandeja vazia</span>
+              <span className="text-muted-foreground text-sm">Bandeja vazia</span>
             )}
           </div>
+          <TrocarChipDaBandeja
+            deviceId={ficha.device.id}
+            chipAtualId={ficha.chipNaBandeja?.id ?? null}
+            chips={paraBandeja}
+          />
         </div>
-      </div>
-
-      <section className="bg-card border-border rounded-xl border p-4">
-        <h2 className="mb-3 font-medium">Editar aparelho</h2>
-        <EditarAparelho
-          deviceId={ficha.device.id}
-          apelido={ficha.device.apelido}
-          notas={ficha.device.notas}
-          origem={ficha.device.origem}
-        />
       </section>
-
-      {/* lg e não md: a sidebar fixa de 224px come a largura, então em 900px
-          de viewport o conteúdo só tem ~650px e três colunas ficariam apertadas. */}
-      <div className="grid gap-3 lg:grid-cols-3">
-        {SLOTS.map((slot) => {
-          const c = ficha.contas.find((conta) => conta.slot === slot)
-
-          // Slot nunca ativado, ou liberado por ban perdido: o operador
-          // precisa ver a vaga, senão ela some da tela e da cabeça dele.
-          if (!c) {
-            return (
-              <div
-                key={slot}
-                className="bg-card border-border flex flex-col gap-2 rounded-xl border p-4"
-              >
-                <div className="text-muted-foreground text-xs tracking-wide uppercase">
-                  {NOME_DO_SLOT[slot]}
-                </div>
-                <div className="text-muted-foreground">Slot livre</div>
-                <Link href="/cadastro" className={cn(LINK, "mt-auto text-sm")}>
-                  Ativar conta aqui
-                </Link>
-              </div>
-            )
-          }
-
-          return (
-            <div
-              key={c.id}
-              className="bg-card border-border flex flex-col gap-2 rounded-xl border p-4"
-            >
-              <div className="text-muted-foreground text-xs tracking-wide uppercase">
-                {NOME_DO_SLOT[c.slot]}
-              </div>
-              <div className="text-lg font-medium tabular-nums">{c.numero}</div>
-              <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 text-sm">
-                <Link href={`/chip/${c.chipId}`} className={LINK}>
-                  {c.chipId}
-                </Link>
-                <span className="tabular-nums">
-                  {idadeEmDias(c.ativadaEm, hoje)} dias
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge
-                  estado={
-                    c.incidenteAberto
-                      ? c.incidenteAberto.tipo === "ban"
-                        ? "ban"
-                        : "restricao"
-                      : "ok"
-                  }
-                />
-                {c.incidenteAberto && (
-                  <span className="text-muted-foreground text-xs tabular-nums">
-                    há {tempoDecorrido(c.incidenteAberto.inicio)}
-                  </span>
-                )}
-              </div>
-              <div className="mt-auto pt-1">
-                {c.incidenteAberto ? (
-                  <EncerrarIncidente
-                    incidentId={c.incidenteAberto.incidentId}
-                    tipo={c.incidenteAberto.tipo}
-                  />
-                ) : (
-                  <RegistrarIncidente accountId={c.id} />
-                )}
-              </div>
-              <div className="border-border flex flex-wrap items-center justify-between gap-2 border-t pt-2">
-                <ConexaoBadge
-                  status={c.evolutionStatus}
-                  proxy={c.proxyStatus}
-                  statusVerificadoEm={c.statusVerificadoEm}
-                />
-                {c.evolutionStatus === "fechada" ? (
-                  <ReconectarDialog accountId={c.id} />
-                ) : (
-                  <VerificarConexao accountId={c.id} />
-                )}
-              </div>
-              <div className="border-border flex flex-col gap-1 border-t pt-2">
-                {c.evolutionServerNome && c.instanceName && (
-                  <div className="text-muted-foreground text-xs">
-                    {c.evolutionServerNome} · {c.instanceName}
-                  </div>
-                )}
-                <div className="flex flex-wrap items-center gap-2">
-                  <DefinirInstancia
-                    accountId={c.id}
-                    instanciaAtual={
-                      c.evolutionServerId && c.instanceName
-                        ? { serverId: c.evolutionServerId, nome: c.instanceName }
-                        : null
-                    }
-                    instancias={instancias}
-                    falharam={falharam}
-                  />
-                </div>
-              </div>
-              <div className="border-border flex flex-wrap items-center gap-2 border-t pt-2">
-                <CorrigirAparelho
-                  accountId={c.id}
-                  aparelhos={aparelhos}
-                  slotAtual={c.slot}
-                  deviceIdAtual={c.deviceId}
-                />
-                <CancelarConta accountId={c.id} />
-              </div>
-            </div>
-          )
-        })}
-      </div>
 
       <section className="bg-card border-border overflow-hidden rounded-xl border">
         <div className="border-border flex items-center justify-between border-b px-4 py-3">

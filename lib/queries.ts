@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, ilike, isNotNull, isNull, max, or, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, gte, ilike, inArray, isNotNull, isNull, max, ne, notInArray, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 
 import { db } from "./db.ts"
@@ -205,13 +205,37 @@ export async function fichaDoAparelho(id: string): Promise<FichaAparelho | null>
   }
 }
 
+export type ContaDoChip = {
+  id: number
+  deviceId: string
+  deviceApelido: string | null
+  slot: string
+  ativadaEm: string
+  evolutionStatus: (typeof account.$inferSelect)["evolutionStatus"]
+  proxyStatus: (typeof account.$inferSelect)["proxyStatus"]
+  statusVerificadoEm: Date | null
+  instanceName: string | null
+  evolutionServerId: number | null
+  evolutionServerNome: string | null
+  incidenteAberto: { incidentId: number; tipo: "restricao" | "ban"; inicio: Date } | null
+}
+
 export type FichaChip = {
   chip: typeof chip.$inferSelect
   aparelhoDaBandeja: typeof device.$inferSelect | null
-  conta: (typeof account.$inferSelect) | null
+  /** Só a conta ativa. Conta aposentada vive no histórico, não no bloco de cima. */
+  conta: ContaDoChip | null
+  /** Todo incidente de toda conta que este chip já gerou. */
+  historico: (typeof incident.$inferSelect)[]
   numeroPerdido: boolean
 }
 
+/**
+ * A ficha do chip precisa responder "em qual aparelho este chip está" e deixar
+ * o operador registrar restrição e ban sem sair da tela. Por isso ela carrega a
+ * conta ativa inteira — aparelho, apelido, conexão, instância e incidente
+ * aberto — e não só a linha crua de `account`.
+ */
 export async function fichaDoChip(id: string): Promise<FichaChip | null> {
   const [oChip] = await db.select().from(chip).where(eq(chip.id, id))
   if (!oChip) return null
@@ -220,24 +244,71 @@ export async function fichaDoChip(id: string): Promise<FichaChip | null> {
     ? await db.select().from(device).where(eq(device.id, oChip.bandejaDeviceId))
     : []
 
-  const [aConta] = await db.select().from(account).where(eq(account.chipId, id))
+  const contas = await db
+    .select({
+      id: account.id,
+      status: account.status,
+      deviceId: account.deviceId,
+      deviceApelido: device.apelido,
+      slot: account.slot,
+      ativadaEm: account.ativadaEm,
+      evolutionStatus: account.evolutionStatus,
+      proxyStatus: account.proxyStatus,
+      statusVerificadoEm: account.statusVerificadoEm,
+      instanceName: account.instanceName,
+      evolutionServerId: account.evolutionServerId,
+      evolutionServerNome: evolutionServer.nome,
+    })
+    .from(account)
+    .innerJoin(device, eq(device.id, account.deviceId))
+    .leftJoin(evolutionServer, eq(evolutionServer.id, account.evolutionServerId))
+    .where(eq(account.chipId, id))
+    .orderBy(desc(account.id))
 
-  let numeroPerdido = false
-  if (aConta) {
-    const [perdido] = await db
-      .select({ id: incident.id })
-      .from(incident)
-      .where(
-        and(
-          eq(incident.accountId, aConta.id),
-          eq(incident.tipo, "ban"),
-          eq(incident.resultado, "perdida"),
-        ),
-      )
-    numeroPerdido = Boolean(perdido)
+  const historico = contas.length
+    ? await db
+        .select()
+        .from(incident)
+        .where(
+          inArray(
+            incident.accountId,
+            contas.map((c) => c.id),
+          ),
+        )
+        .orderBy(desc(incident.inicio))
+    : []
+
+  const ativa = contas.find((c) => c.status === "ativa") ?? null
+  const aberto = ativa
+    ? (historico.find((h) => h.accountId === ativa.id && h.fim === null) ?? null)
+    : null
+
+  return {
+    chip: oChip,
+    aparelhoDaBandeja: aparelho ?? null,
+    conta: ativa
+      ? {
+          id: ativa.id,
+          deviceId: ativa.deviceId,
+          deviceApelido: ativa.deviceApelido,
+          slot: ativa.slot,
+          ativadaEm: ativa.ativadaEm,
+          evolutionStatus: ativa.evolutionStatus,
+          proxyStatus: ativa.proxyStatus,
+          statusVerificadoEm: ativa.statusVerificadoEm,
+          instanceName: ativa.instanceName,
+          evolutionServerId: ativa.evolutionServerId,
+          evolutionServerNome: ativa.evolutionServerNome,
+          incidenteAberto: aberto
+            ? { incidentId: aberto.id, tipo: aberto.tipo, inicio: aberto.inicio }
+            : null,
+        }
+      : null,
+    historico,
+    numeroPerdido: historico.some(
+      (h) => h.tipo === "ban" && h.resultado === "perdida",
+    ),
   }
-
-  return { chip: oChip, aparelhoDaBandeja: aparelho ?? null, conta: aConta ?? null, numeroPerdido }
 }
 
 export type TarefaDoDia = {
@@ -552,4 +623,32 @@ export async function servidoresEvolutionAtivos(): Promise<ServidorComId[]> {
     .where(eq(evolutionServer.ativo, true))
     .orderBy(asc(evolutionServer.nome))
   return linhas.map((s) => ({ id: s.id, nome: s.nome, url: s.url, apiKey: s.apiKey }))
+}
+
+export type ChipParaBandeja = { id: string; numero: string; operadora: string }
+
+/**
+ * Chips que podem ir para a bandeja deste aparelho: não aposentados e sem
+ * conta ativa. O que já está nesta bandeja entra também — sem ele o select
+ * abriria sem o valor atual, e o operador não veria que a bandeja está ocupada.
+ */
+export async function chipsParaBandeja(deviceId: string): Promise<ChipParaBandeja[]> {
+  const emContaAtiva = db
+    .select({ chipId: account.chipId })
+    .from(account)
+    .where(eq(account.status, "ativa"))
+
+  return db
+    .select({ id: chip.id, numero: chip.numero, operadora: chip.operadora })
+    .from(chip)
+    .where(
+      and(
+        ne(chip.status, "aposentado"),
+        or(
+          notInArray(chip.id, emContaAtiva),
+          and(eq(chip.local, "bandeja"), eq(chip.bandejaDeviceId, deviceId)),
+        ),
+      ),
+    )
+    .orderBy(asc(chip.id))
 }
