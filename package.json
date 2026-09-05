@@ -13,7 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "node --env-file=.env.local lib/seed.ts",
-    "test": "node --test lib/warmup.test.ts lib/evolution.test.ts"
+    "test": "node --test lib/warmup.test.ts lib/evolution.test.ts lib/acoes.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
