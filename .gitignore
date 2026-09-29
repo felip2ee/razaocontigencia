@@ -40,4 +40,5 @@ next-env.d.ts
 
 # worktrees isolados e scratch de brainstorming (superpowers)
 /.claude/worktrees/
+/.worktrees/
 /.superpowers/
