@@ -180,7 +180,7 @@ export function gerarRelatorio(
       chip.bans++
       aparelho.bans++
     }
-    if (incidente.resultado === "perdida") chip.perdido = true
+    if (incidente.tipo === "ban" && incidente.resultado === "perdida") chip.perdido = true
 
     return {
       ...incidente,

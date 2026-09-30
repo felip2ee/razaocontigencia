@@ -114,3 +114,14 @@ test("rejeita incidente sem conta correspondente", () => {
     /999/,
   )
 })
+
+test("restricao perdida nao marca chip nem aparelho como perdido", () => {
+  const comRestricaoPerdida = gerarRelatorio({
+    contas: [contas[1]],
+    incidentes: [{ ...incidentes[2], accountId: 3, resultado: "perdida" }],
+  }, geradoEm)
+
+  assert.equal(comRestricaoPerdida.resumo.chipsPerdidos, 0)
+  assert.equal(comRestricaoPerdida.chips[0].perdido, false)
+  assert.equal(comRestricaoPerdida.aparelhos[0].chipsPerdidos, 0)
+})
