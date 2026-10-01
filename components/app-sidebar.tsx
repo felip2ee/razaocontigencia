@@ -1,6 +1,14 @@
 "use client"
 
-import { CircuitBoard, LayoutDashboard, PlusCircle, Server, Smartphone, Thermometer } from "lucide-react"
+import {
+  CircuitBoard,
+  FileSpreadsheet,
+  LayoutDashboard,
+  PlusCircle,
+  Server,
+  Smartphone,
+  Thermometer,
+} from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -10,7 +18,10 @@ import { cn } from "@/lib/utils"
 const GRUPOS = [
   {
     rotulo: "Principal",
-    itens: [{ href: "/", nome: "Painel", Icone: LayoutDashboard }],
+    itens: [
+      { href: "/", nome: "Painel", Icone: LayoutDashboard },
+      { href: "/relatorio", nome: "Relatório", Icone: FileSpreadsheet },
+    ],
   },
   {
     rotulo: "Operação",
@@ -28,7 +39,7 @@ export function AppSidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="bg-sidebar border-sidebar-border flex w-56 shrink-0 flex-col border-r">
+    <aside className="flex w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
       <div className="px-5 py-6">
         <Link href="/" aria-label="Nova Digital — ir para o painel">
           <Image
@@ -45,11 +56,12 @@ export function AppSidebar() {
       <nav className="flex flex-col gap-6 px-3 py-2">
         {GRUPOS.map((grupo) => (
           <div key={grupo.rotulo} className="flex flex-col gap-1">
-            <div className="text-sidebar-foreground/80 px-2 pb-1 text-[0.6875rem] font-medium tracking-wider uppercase">
+            <div className="px-2 pb-1 text-[0.6875rem] font-medium tracking-wider text-sidebar-foreground/80 uppercase">
               {grupo.rotulo}
             </div>
             {grupo.itens.map(({ href, nome, Icone }) => {
-              const ativo = href === "/" ? pathname === "/" : pathname.startsWith(href)
+              const ativo =
+                href === "/" ? pathname === "/" : pathname.startsWith(href)
               return (
                 <Link
                   key={href}
@@ -58,8 +70,8 @@ export function AppSidebar() {
                   className={cn(
                     "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
                     ativo
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                      ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
                   )}
                 >
                   <Icone className="size-4 shrink-0" />
