@@ -129,8 +129,8 @@ test("chips detalham origem, agregados e perda definitiva", () => {
     csvDoRelatorio("chips", relatorio),
     [
       "\uFEFFidentificador;numero;operadora;origem;situacao;primeira_ativacao;aparelhos;contas;incidentes;restricoes;bans;perdido_definitivamente",
-      "c1;5511999990001;Operadora A;Própria;em uso;01/09/2026;d1;1;2;1;1;Sim",
-      "c2;5511999990002;Operadora B;Externa;em uso;02/09/2026;d2;1;1;0;1;Não",
+      "'c1;'5511999990001;Operadora A;Própria;em uso;01/09/2026;'d1;1;2;1;1;Sim",
+      "'c2;'5511999990002;Operadora B;Externa;em uso;02/09/2026;'d2;1;1;0;1;Não",
       "",
     ].join("\r\n")
   )
@@ -141,9 +141,9 @@ test("incidentes detalham contexto e rotulos de ausencias", () => {
     csvDoRelatorio("incidentes", relatorio),
     [
       "\uFEFFidentificador;tipo;inicio;termino;resultado;observacoes;conta;chip;numero_chip;origem_chip;aparelho;apelido_aparelho;origem_aparelho;slot",
-      "10;restrição;28/09/2026, 09:00:00;28/09/2026, 10:00:00;recuperada;liberada;1;c1;5511999990001;Própria;d1;Principal;Própria;A",
-      "20;ban;28/09/2026, 11:00:00;28/09/2026, 12:00:00;perdida;sem recuperação;1;c1;5511999990001;Própria;d1;Principal;Própria;A",
-      "30;ban;28/09/2026, 23:30:00;em aberto;pendente;;2;c2;5511999990002;Externa;d2;;Externa;B",
+      "'10;restrição;28/09/2026, 09:00:00;28/09/2026, 10:00:00;recuperada;liberada;'1;'c1;'5511999990001;Própria;'d1;Principal;Própria;A",
+      "'20;ban;28/09/2026, 11:00:00;28/09/2026, 12:00:00;perdida;sem recuperação;'1;'c1;'5511999990001;Própria;'d1;Principal;Própria;A",
+      "'30;ban;28/09/2026, 23:30:00;em aberto;pendente;;'2;'c2;'5511999990002;Externa;'d2;;Externa;B",
       "",
     ].join("\r\n")
   )
@@ -154,8 +154,8 @@ test("aparelhos detalham origem e agregados", () => {
     csvDoRelatorio("aparelhos", relatorio),
     [
       "\uFEFFidentificador;apelido;origem;situacao;chips;contas;incidentes;restricoes;bans;chips_perdidos_definitivamente",
-      "d1;Principal;Própria;ativo;1;1;2;1;1;1",
-      "d2;;Externa;quarentena;1;1;1;0;1;0",
+      "'d1;Principal;Própria;ativo;1;1;2;1;1;1",
+      "'d2;;Externa;quarentena;1;1;1;0;1;0",
       "",
     ].join("\r\n")
   )
@@ -168,5 +168,102 @@ test("relatorio vazio mantem apenas cabecalhos dos detalhes", () => {
     assert.equal(linhas.length, 2)
     assert.ok(linhas[0].startsWith("\uFEFF"))
     assert.equal(linhas[1], "")
+  }
+})
+
+for (const valor of ["01", "1", "011999990001", "12345678901234567"]) {
+  test(`preserva ${valor} como texto em todos os identificadores e telefones`, () => {
+    const dados = gerarRelatorio(
+      {
+        contas: [
+          { ...contas[0], chipId: valor, chipNumero: valor, deviceId: valor },
+        ],
+        incidentes: [incidentes[0]],
+      },
+      geradoEm
+    )
+    // These fixture fields contain no CSV delimiters; inspect emitted cells,
+    // including the literal text marker, rather than only the domain values.
+    const chips = csvDoRelatorio("chips", dados).split("\r\n")[1].split(";")
+    const eventos = csvDoRelatorio("incidentes", dados)
+      .split("\r\n")[1]
+      .split(";")
+    const aparelhos = csvDoRelatorio("aparelhos", dados)
+      .split("\r\n")[1]
+      .split(";")
+    assert.deepEqual(
+      [chips[0], chips[1], chips[6]],
+      [`'${valor}`, `'${valor}`, `'${valor}`]
+    )
+    assert.deepEqual(
+      [eventos[0], eventos[6], eventos[7], eventos[8], eventos[10]],
+      ["'10", "'1", `'${valor}`, `'${valor}`, `'${valor}`]
+    )
+    assert.equal(aparelhos[0], `'${valor}`)
+    assert.deepEqual(chips.slice(7, 11), ["1", "1", "1", "0"])
+    assert.deepEqual(aparelhos.slice(4), ["1", "1", "1", "1", "0", "0"])
+    assert.ok(
+      csvDoRelatorio("resumo", dados).includes("Chips utilizados;1\r\n")
+    )
+  })
+}
+
+for (const valor of ["=1+1", "+cmd", "-12", " @cmd", "\t=1+1"]) {
+  test(`neutraliza texto gerencial perigoso ${JSON.stringify(valor)} em cada CSV`, () => {
+    const dados = gerarRelatorio(
+      {
+        contas: [
+          {
+            ...contas[0],
+            chipId: valor,
+            chipNumero: valor,
+            chipOperadora: valor,
+            deviceId: valor,
+            deviceApelido: valor,
+          },
+        ],
+        incidentes: [{ ...incidentes[0], notas: valor }],
+      },
+      geradoEm
+    )
+    const chips = csvDoRelatorio("chips", dados).split("\r\n")[1].split(";")
+    const eventos = csvDoRelatorio("incidentes", dados)
+      .split("\r\n")[1]
+      .split(";")
+    const aparelhos = csvDoRelatorio("aparelhos", dados)
+      .split("\r\n")[1]
+      .split(";")
+    for (const campo of [
+      chips[0],
+      chips[1],
+      chips[2],
+      chips[6],
+      eventos[5],
+      eventos[7],
+      eventos[8],
+      eventos[10],
+      eventos[11],
+      aparelhos[0],
+      aparelhos[1],
+    ]) {
+      assert.equal(campo, `'${valor}`)
+    }
+  })
+}
+
+test("escapa identificadores com aspas e separadores mantendo a neutralizacao", () => {
+  const valor = '=HYPERLINK("https://example.invalid";"abrir")'
+  const dados = gerarRelatorio(
+    {
+      contas: [
+        { ...contas[0], chipId: valor, chipNumero: valor, deviceId: valor },
+      ],
+      incidentes: [incidentes[0]],
+    },
+    geradoEm
+  )
+  const campo = `"'=HYPERLINK(""https://example.invalid"";""abrir"")"`
+  for (const tipo of ["chips", "incidentes", "aparelhos"] as const) {
+    assert.ok(csvDoRelatorio(tipo, dados).includes(campo))
   }
 })

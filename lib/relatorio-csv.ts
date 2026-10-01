@@ -46,6 +46,13 @@ function dataCivil(valor: string): string {
   return formatoData.format(new Date(`${valor}T12:00:00.000Z`))
 }
 
+function identificadorTexto(valor: string | number): string {
+  // CSV has no cell types. A literal apostrophe prevents Excel's numeric/date
+  // inference (and formula execution); CSV importers may display this prefix.
+  // Keep metrics outside this helper so they remain numeric.
+  return `'${valor}`
+}
+
 export function identificarTipoArquivo(
   valor: string
 ): TipoArquivoRelatorio | null {
@@ -106,13 +113,13 @@ export function csvDoRelatorio(
         "perdido_definitivamente",
       ],
       relatorio.chips.map((chip): ValorCsv[] => [
-        chip.id,
-        chip.numero,
+        identificadorTexto(chip.id),
+        identificadorTexto(chip.numero),
         chip.operadora,
         origemLegivel(chip.origem),
         situacaoLegivel(chip.status),
         dataCivil(chip.primeiraAtivacao),
-        [...chip.aparelhos].sort().join(", "),
+        identificadorTexto([...chip.aparelhos].sort().join(", ")),
         chip.contas,
         chip.incidentes,
         chip.restricoes,
@@ -141,17 +148,17 @@ export function csvDoRelatorio(
         "slot",
       ],
       relatorio.incidentes.map((incidente): ValorCsv[] => [
-        incidente.id,
+        identificadorTexto(incidente.id),
         incidente.tipo === "restricao" ? "restrição" : "ban",
         formatoDataHora.format(incidente.inicio),
         incidente.fim ? formatoDataHora.format(incidente.fim) : "em aberto",
         incidente.resultado ?? "pendente",
         incidente.notas,
-        incidente.accountId,
-        incidente.chipId,
-        incidente.chipNumero,
+        identificadorTexto(incidente.accountId),
+        identificadorTexto(incidente.chipId),
+        identificadorTexto(incidente.chipNumero),
         origemLegivel(incidente.chipOrigem),
-        incidente.deviceId,
+        identificadorTexto(incidente.deviceId),
         incidente.deviceApelido,
         origemLegivel(incidente.deviceOrigem),
         incidente.slot,
@@ -173,7 +180,7 @@ export function csvDoRelatorio(
       "chips_perdidos_definitivamente",
     ],
     relatorio.aparelhos.map((aparelho): ValorCsv[] => [
-      aparelho.id,
+      identificadorTexto(aparelho.id),
       aparelho.apelido,
       origemLegivel(aparelho.origem),
       situacaoLegivel(aparelho.status),
